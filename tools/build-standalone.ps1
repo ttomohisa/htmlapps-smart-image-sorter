@@ -134,6 +134,19 @@ $buildManifest = [ordered]@{
 $bundleJson = $bundle | ConvertTo-Json -Depth 30 -Compress
 $buildManifestJson = $buildManifest | ConvertTo-Json -Depth 10 -Compress
 $html = $template.Replace('__APP_CONFIG_JSON__',$appConfig.Trim()).Replace('__BUILD_MANIFEST_JSON__',$buildManifestJson).Replace('__EMBEDDED_ASSET_BUNDLE_JSON__',$bundleJson).Replace('__FIXED_CATEGORY_CATALOG_JSON__',$categoryDefs.Trim()).Replace('__ACCURACY_REGRESSION_CONFIG_JSON__',$regressionConfig.Trim())
+
+$buildPlaceholders = @(
+  '__APP_CONFIG_JSON__',
+  '__BUILD_MANIFEST_JSON__',
+  '__EMBEDDED_ASSET_BUNDLE_JSON__',
+  '__FIXED_CATEGORY_CATALOG_JSON__',
+  '__ACCURACY_REGRESSION_CONFIG_JSON__'
+)
+$remainingPlaceholders = @($buildPlaceholders | Where-Object { $html.Contains($_) })
+if ($remainingPlaceholders.Count -gt 0) {
+  throw "Unresolved build placeholder(s): $($remainingPlaceholders -join ', ')"
+}
+
 [IO.File]::WriteAllText($OutputPath,$html,[Text.UTF8Encoding]::new($false))
 
 $metrics = [ordered]@{

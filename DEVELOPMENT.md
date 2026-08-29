@@ -160,3 +160,7 @@ check-regression-dataset.bat -Strict
 - 処理失敗画像がZIPへ混入しない
 - `main` pushでPages workflowが起動する
 - `assets/screenshot-en.png` / `assets/screenshot-ja.png` が現行UIと一致する
+## Release verification note
+
+Generated HTML verification checks the five template placeholders owned by this project explicitly. Do not use a broad `__[A-Z0-9_]+__` scan against the final standalone HTML; it can flag unrelated double-underscore tokens and does not identify which build placeholder is actually unresolved. The builder itself now fails with the exact placeholder name if one of the five replacements is missing.
+
