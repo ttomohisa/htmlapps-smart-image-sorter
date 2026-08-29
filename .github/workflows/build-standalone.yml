@@ -1,0 +1,74 @@
+name: Validate standalone HTML
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "src/**"
+      - "tools/**"
+      - "data/**"
+      - "models/**"
+      - "tests/accuracy/regression-config.json"
+      - "app.config.json"
+      - "build-standalone.bat"
+      - "setup-and-build.bat"
+      - "setup-assets.bat"
+      - ".github/workflows/build-standalone.yml"
+      - ".github/workflows/deploy-pages.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          lfs: false
+
+      - name: Verify committed release assets
+        shell: pwsh
+        run: |
+          $model = './models/TinyCLIP-ViT-8M-16-Text-3M-YFCC15M-ONNX/onnx/vision_model_quantized.onnx'
+          $labels = './data/fixed-label-embeddings.tinyclip-int8.generated.json'
+          if (!(Test-Path $model)) { throw 'Committed release ONNX is missing' }
+          if (!(Test-Path $labels)) { throw 'Committed label embeddings are missing' }
+          $sha = (Get-FileHash $model -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($sha -ne 'bbf8426b0e548881dcfd9257030dd6139fceeeb4808994968b882ecc3ada291f') { throw "Release model SHA mismatch: $sha" }
+
+      - name: Fetch pinned runtime assets
+        shell: pwsh
+        run: ./tools/setup-assets.ps1
+
+      - name: Build standalone HTML
+        shell: pwsh
+        run: ./tools/build-standalone.ps1 -OutputPath ./dist/index.html
+
+      - name: Verify generated artifact
+        shell: pwsh
+        run: |
+          if (!(Test-Path ./dist/index.html)) { throw 'dist/index.html was not generated' }
+          $html = Get-Content -Raw ./dist/index.html
+          if ($html -notmatch 'connect-src blob:') { throw 'embedded Blob fetch CSP is missing' }
+          if ($html -notmatch "'wasm-unsafe-eval'") { throw 'WASM CSP permission is missing' }
+          if ($html -match 'connect-src[^;]*(https?:|\*)') { throw 'external runtime network access must remain blocked' }
+          if ($html -match '__[A-Z0-9_]+__') { throw 'unresolved build placeholder remains' }
+          if ($html -notmatch 'v1\.0\.0') { throw 'release version is missing from generated HTML' }
+          New-Item -ItemType File -Force -Path ./dist/.nojekyll | Out-Null
+          Write-Host "Standalone size: $([math]::Round((Get-Item ./dist/index.html).Length / 1MB, 1)) MB"
+
+      - name: Upload standalone artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: smart-image-sorter-${{ github.event.pull_request.head.sha || github.sha }}
+          path: |
+            dist/index.html
+            dist/build-metrics.json
+            dist/.nojekyll
+          if-no-files-found: error
+          retention-days: 14

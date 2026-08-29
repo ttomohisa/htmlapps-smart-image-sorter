@@ -1,0 +1,18 @@
+{
+  "$schema": "./schemas/app-config.schema.json",
+  "name": "Smart Image Sorter",
+  "nameJa": "Smart Image Sorter",
+  "slug": "smart-image-sorter",
+  "version": "1.0.0",
+  "description": "Sort up to 500 images with local AI, review uncertain results, and save the original files in category ZIPs.",
+  "descriptionJa": "最大500枚の画像をローカルAIでまとめて仕分けし、迷った画像だけ確認して、元画像のままカテゴリ別ZIPで保存できます。",
+  "defaultLanguage": "auto",
+  "repository": {
+    "owner": "ttomohisa",
+    "name": "htmlapps-smart-image-sorter"
+  },
+  "build": {
+    "output": "index.html",
+    "blockRuntimeNetwork": true
+  }
+}

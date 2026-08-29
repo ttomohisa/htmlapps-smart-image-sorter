@@ -1,0 +1,29 @@
+dist/
+*.tmp
+*.log
+index.html
+
+# Runtime dependencies downloaded by setup-assets.bat.
+vendor/transformers/transformers.min.js
+vendor/transformers/TRANSFORMERS-LICENSE
+vendor/transformers/ort-wasm-simd-threaded.mjs
+vendor/transformers/ort-wasm-simd-threaded.wasm
+
+# TinyCLIP metadata downloaded by normal setup.
+models/TinyCLIP-ViT-8M-16-Text-3M-YFCC15M-ONNX/config.json
+models/TinyCLIP-ViT-8M-16-Text-3M-YFCC15M-ONNX/preprocessor_config.json
+models/TinyCLIP-ViT-8M-16-Text-3M-YFCC15M-ONNX/LICENSE
+
+# Developer-only TinyCLIP assets. The release model below is committed separately.
+models/TinyCLIP-ViT-8M-16-Text-3M-YFCC15M-ONNX/tokenizer.json
+models/TinyCLIP-ViT-8M-16-Text-3M-YFCC15M-ONNX/tokenizer_config.json
+models/TinyCLIP-ViT-8M-16-Text-3M-YFCC15M-ONNX/special_tokens_map.json
+models/TinyCLIP-ViT-8M-16-Text-3M-YFCC15M-ONNX/merges.txt
+models/TinyCLIP-ViT-8M-16-Text-3M-YFCC15M-ONNX/vocab.json
+models/TinyCLIP-ViT-8M-16-Text-3M-YFCC15M-ONNX/onnx/model_quantized.onnx
+models/TinyCLIP-ViT-8M-16-Text-3M-YFCC15M-ONNX/onnx/vision_model_quantized.report.json
+.venv-onnx/
+
+# User-provided local regression samples; do not publish by accident.
+tests/accuracy/local-samples/**
+!tests/accuracy/local-samples/README.txt

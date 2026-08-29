@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 5,
+  "releaseRuntimeModel": {
+    "id": "tinyclip-vision-int8",
+    "runtimeModelId": "TinyCLIP-ViT-8M-16-Text-3M-YFCC15M-ONNX",
+    "runtimeMode": "vision-split",
+    "dtype": "q8",
+    "modelFile": "models/TinyCLIP-ViT-8M-16-Text-3M-YFCC15M-ONNX/onnx/vision_model_quantized.onnx",
+    "modelBytes": 8957217,
+    "modelSha256": "bbf8426b0e548881dcfd9257030dd6139fceeeb4808994968b882ecc3ada291f",
+    "labelEmbeddings": "data/fixed-label-embeddings.tinyclip-int8.generated.json",
+    "repositoryCommitted": true,
+    "notes": "Production TinyCLIP vision-only INT8 runtime. The release ONNX is committed directly to Git and is not rebuilt during normal setup."
+  },
+  "developerMaintenance": {
+    "fullModel": "models/TinyCLIP-ViT-8M-16-Text-3M-YFCC15M-ONNX/onnx/model_quantized.onnx",
+    "fullModelPurpose": "Downloaded on demand only when regenerating label embeddings or re-extracting the release vision model.",
+    "pythonUvRequiredForNormalBuild": false,
+    "pythonUvRequiredForVisionReExtraction": true
+  }
+}

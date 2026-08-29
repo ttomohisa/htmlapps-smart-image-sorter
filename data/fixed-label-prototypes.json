@@ -1,0 +1,429 @@
+{
+  "schemaVersion": 3,
+  "model": "onnx-community/TinyCLIP-ViT-8M-16-Text-3M-YFCC15M-ONNX",
+  "categories": [
+    {
+      "key": "person",
+      "group": "recommended",
+      "recommended": true,
+      "ja": "人物",
+      "en": "People",
+      "descriptionJa": "人物・集合写真・ポートレート",
+      "descriptionEn": "people, portraits, group photos",
+      "prototypes": [
+        "a photo of a person",
+        "a photo of people",
+        "a portrait photo",
+        "a selfie photo",
+        "a group photo of people"
+      ]
+    },
+    {
+      "key": "animal",
+      "group": "recommended",
+      "recommended": true,
+      "ja": "動物",
+      "en": "Animals",
+      "descriptionJa": "犬・猫・鳥などの動物",
+      "descriptionEn": "animals such as dogs, cats, and birds",
+      "prototypes": [
+        "a photo of an animal",
+        "a photo of a pet",
+        "a photo of a dog",
+        "a photo of a cat",
+        "a photo of a bird",
+        "a wildlife photo"
+      ]
+    },
+    {
+      "key": "food",
+      "group": "recommended",
+      "recommended": true,
+      "ja": "食べ物",
+      "en": "Food",
+      "descriptionJa": "料理・食事・食べ物",
+      "descriptionEn": "meals, dishes, food",
+      "prototypes": [
+        "a photo of food",
+        "a meal photo",
+        "a cooked dish",
+        "a bowl of food",
+        "a plated meal",
+        "a close-up photo of food"
+      ]
+    },
+    {
+      "key": "scenery",
+      "group": "recommended",
+      "recommended": true,
+      "ja": "風景",
+      "en": "Scenery",
+      "descriptionJa": "自然風景・旅行風景・屋外景色",
+      "descriptionEn": "landscapes, outdoor scenery, travel views",
+      "prototypes": [
+        "a landscape photo",
+        "a scenic outdoor view",
+        "a nature photo",
+        "a travel scenery photo",
+        "a mountain or river landscape",
+        "an outdoor scenic photo"
+      ]
+    },
+    {
+      "key": "document",
+      "group": "recommended",
+      "recommended": true,
+      "ja": "書類",
+      "en": "Documents",
+      "descriptionJa": "印刷書類・紙文書・案内",
+      "descriptionEn": "printed documents, paperwork",
+      "prototypes": [
+        "a photo of a document",
+        "a printed paper document",
+        "paperwork on paper",
+        "an official document",
+        "a letter-sized printed document",
+        "a paper form"
+      ]
+    },
+    {
+      "key": "screenshot",
+      "group": "recommended",
+      "recommended": true,
+      "ja": "スクリーンショット",
+      "en": "Screenshots",
+      "descriptionJa": "アプリ画面・Web画面・OS画面",
+      "descriptionEn": "app screens, web pages, screen captures",
+      "prototypes": [
+        "a screenshot",
+        "a screen capture",
+        "an app screen",
+        "a browser screen",
+        "a phone screenshot",
+        "a computer screen capture"
+      ]
+    },
+    {
+      "key": "vehicle",
+      "group": "recommended",
+      "recommended": true,
+      "ja": "乗り物",
+      "en": "Vehicles",
+      "descriptionJa": "車・電車・飛行機・自転車",
+      "descriptionEn": "cars, trains, airplanes, bicycles",
+      "prototypes": [
+        "a photo of a vehicle",
+        "a car photo",
+        "a train photo",
+        "a bicycle photo",
+        "an airplane photo",
+        "a transportation photo"
+      ]
+    },
+    {
+      "key": "product",
+      "group": "recommended",
+      "recommended": true,
+      "ja": "商品",
+      "en": "Products",
+      "descriptionJa": "商品写真・物撮り・販売用写真",
+      "descriptionEn": "product photos, retail items",
+      "prototypes": [
+        "a product photo",
+        "a retail item photo",
+        "a merchandise photo",
+        "a studio product shot",
+        "a shopping item photo",
+        "a product on a plain background"
+      ]
+    },
+    {
+      "key": "drink",
+      "group": "more",
+      "recommended": false,
+      "ja": "飲み物",
+      "en": "Drinks",
+      "descriptionJa": "コーヒー・ジュース・お酒",
+      "descriptionEn": "coffee, juice, alcohol and other drinks",
+      "prototypes": [
+        "a photo of a drink",
+        "a beverage photo",
+        "a cup of coffee",
+        "a glass of juice",
+        "a drink on a table"
+      ]
+    },
+    {
+      "key": "building_city",
+      "group": "more",
+      "recommended": false,
+      "ja": "建物・街並み",
+      "en": "Buildings & cityscapes",
+      "descriptionJa": "建築物・街・都市景観",
+      "descriptionEn": "buildings, streets, city views",
+      "prototypes": [
+        "a building photo",
+        "a cityscape photo",
+        "urban street scenery",
+        "an exterior building shot",
+        "a photo of architecture"
+      ]
+    },
+    {
+      "key": "plant_flower",
+      "group": "more",
+      "recommended": false,
+      "ja": "植物・花",
+      "en": "Plants & flowers",
+      "descriptionJa": "花・観葉植物・木々",
+      "descriptionEn": "flowers, plants, trees",
+      "prototypes": [
+        "a photo of flowers",
+        "a plant photo",
+        "a flower close-up",
+        "green plants outdoors",
+        "a tree or garden photo"
+      ]
+    },
+    {
+      "key": "indoor",
+      "group": "more",
+      "recommended": false,
+      "ja": "室内",
+      "en": "Indoors",
+      "descriptionJa": "部屋の中・室内風景",
+      "descriptionEn": "indoor scenes, rooms, interiors",
+      "prototypes": [
+        "an indoor photo",
+        "an interior room photo",
+        "a room inside a house",
+        "an indoor scene",
+        "a living space photo"
+      ]
+    },
+    {
+      "key": "sport",
+      "group": "more",
+      "recommended": false,
+      "ja": "スポーツ",
+      "en": "Sports",
+      "descriptionJa": "スポーツの試合・運動",
+      "descriptionEn": "sports, exercise, matches",
+      "prototypes": [
+        "a sports photo",
+        "people playing sports",
+        "an exercise scene",
+        "a game or match photo",
+        "a sports action shot"
+      ]
+    },
+    {
+      "key": "event",
+      "group": "more",
+      "recommended": false,
+      "ja": "イベント",
+      "en": "Events",
+      "descriptionJa": "行事・ライブ・展示会・式典",
+      "descriptionEn": "events, ceremonies, concerts",
+      "prototypes": [
+        "an event photo",
+        "a concert or live event",
+        "a ceremony photo",
+        "people at an event",
+        "a festival photo"
+      ]
+    },
+    {
+      "key": "fashion",
+      "group": "more",
+      "recommended": false,
+      "ja": "服・ファッション",
+      "en": "Fashion",
+      "descriptionJa": "服・コーディネート・着用写真",
+      "descriptionEn": "clothing, outfits, fashion items",
+      "prototypes": [
+        "a fashion photo",
+        "clothing on a person",
+        "an outfit photo",
+        "apparel product photo",
+        "a clothing item"
+      ]
+    },
+    {
+      "key": "home_electronics",
+      "group": "more",
+      "recommended": false,
+      "ja": "家具・家電",
+      "en": "Furniture & appliances",
+      "descriptionJa": "椅子・机・家電・生活用品",
+      "descriptionEn": "furniture, appliances, home goods",
+      "prototypes": [
+        "a furniture photo",
+        "a home appliance",
+        "a chair or table photo",
+        "a household appliance",
+        "a home interior item"
+      ]
+    },
+    {
+      "key": "book_magazine",
+      "group": "more",
+      "recommended": false,
+      "ja": "本・雑誌",
+      "en": "Books & magazines",
+      "descriptionJa": "本・雑誌・冊子・表紙",
+      "descriptionEn": "books, magazines, printed volumes",
+      "prototypes": [
+        "a book photo",
+        "a magazine cover",
+        "an open book",
+        "a printed booklet",
+        "a stack of books"
+      ]
+    },
+    {
+      "key": "toy",
+      "group": "more",
+      "recommended": false,
+      "ja": "おもちゃ",
+      "en": "Toys",
+      "descriptionJa": "ぬいぐるみ・玩具・フィギュア",
+      "descriptionEn": "toys, plushies, figurines",
+      "prototypes": [
+        "a toy photo",
+        "a plush toy",
+        "a figurine photo",
+        "children's toy",
+        "a toy on a table"
+      ]
+    },
+    {
+      "key": "tool_machine",
+      "group": "more",
+      "recommended": false,
+      "ja": "道具・機械",
+      "en": "Tools & machines",
+      "descriptionJa": "工具・作業機械・装置",
+      "descriptionEn": "tools, machinery, equipment",
+      "prototypes": [
+        "a tool photo",
+        "a machine photo",
+        "hand tools",
+        "industrial equipment",
+        "mechanical equipment photo"
+      ]
+    },
+    {
+      "key": "receipt",
+      "group": "more",
+      "recommended": false,
+      "ja": "レシート・領収書",
+      "en": "Receipts",
+      "descriptionJa": "レシート・領収書・会計票",
+      "descriptionEn": "receipts and proof-of-purchase slips",
+      "prototypes": [
+        "a receipt photo",
+        "a sales receipt",
+        "a proof of purchase slip",
+        "a receipt on paper",
+        "a store receipt"
+      ]
+    },
+    {
+      "key": "business_card",
+      "group": "more",
+      "recommended": false,
+      "ja": "名刺",
+      "en": "Business cards",
+      "descriptionJa": "名刺・カード型の連絡先",
+      "descriptionEn": "business cards, name cards",
+      "prototypes": [
+        "a business card photo",
+        "a name card",
+        "a contact card on a desk",
+        "a printed business card",
+        "a stack of business cards"
+      ]
+    },
+    {
+      "key": "handwritten_note",
+      "group": "more",
+      "recommended": false,
+      "ja": "手書きメモ",
+      "en": "Handwritten notes",
+      "descriptionJa": "手書きのノート・メモ・落書き",
+      "descriptionEn": "handwritten notes, notebooks, memos",
+      "prototypes": [
+        "a handwritten note",
+        "a notebook page with handwriting",
+        "a handwritten memo",
+        "handwritten text on paper",
+        "a note written by hand"
+      ]
+    },
+    {
+      "key": "map",
+      "group": "more",
+      "recommended": false,
+      "ja": "地図",
+      "en": "Maps",
+      "descriptionJa": "地図・路線図・ナビ画面",
+      "descriptionEn": "maps, route maps, navigation screens",
+      "prototypes": [
+        "a map image",
+        "a navigation map",
+        "a route map screenshot",
+        "a geographic map",
+        "a map on a screen"
+      ]
+    },
+    {
+      "key": "chart_diagram",
+      "group": "more",
+      "recommended": false,
+      "ja": "グラフ・図表",
+      "en": "Charts & diagrams",
+      "descriptionJa": "グラフ・表・概念図・フローチャート",
+      "descriptionEn": "graphs, charts, diagrams",
+      "prototypes": [
+        "a chart image",
+        "a graph or plot",
+        "a diagram",
+        "a flowchart",
+        "an infographic chart"
+      ]
+    },
+    {
+      "key": "illustration_comic",
+      "group": "more",
+      "recommended": false,
+      "ja": "イラスト・漫画",
+      "en": "Illustrations & comics",
+      "descriptionJa": "イラスト・アニメ調画像・漫画",
+      "descriptionEn": "illustrations, drawings, comics",
+      "prototypes": [
+        "an illustration",
+        "a comic image",
+        "a cartoon drawing",
+        "digital artwork",
+        "an anime-style illustration"
+      ]
+    },
+    {
+      "key": "qr_barcode",
+      "group": "more",
+      "recommended": false,
+      "ja": "QR・バーコード",
+      "en": "QR & barcodes",
+      "descriptionJa": "QRコード・バーコード・コード画像",
+      "descriptionEn": "QR codes and barcodes",
+      "prototypes": [
+        "a QR code",
+        "a barcode image",
+        "a QR code on paper",
+        "a barcode label",
+        "a machine-readable code image"
+      ]
+    }
+  ]
+}

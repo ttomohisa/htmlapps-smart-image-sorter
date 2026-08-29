@@ -1,0 +1,5 @@
+# The 8.5 MB release ONNX is intentionally committed as a normal Git binary.
+*.onnx binary
+
+# Large WASM files, if committed in the future, remain LFS candidates.
+*.wasm filter=lfs diff=lfs merge=lfs -text

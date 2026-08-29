@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "minImagesPerCategory": 5,
+  "overallTop1": 0.80,
+  "recommendedTop1": 0.85,
+  "macroTop1": 0.75,
+  "maxReviewRate": 0.35,
+  "reviewProbabilityThreshold": 0.52,
+  "reviewMarginThreshold": 0.13
+}
