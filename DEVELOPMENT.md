@@ -164,3 +164,23 @@ check-regression-dataset.bat -Strict
 
 Generated HTML verification checks the five template placeholders owned by this project explicitly. Do not use a broad `__[A-Z0-9_]+__` scan against the final standalone HTML; it can flag unrelated double-underscore tokens and does not identify which build placeholder is actually unresolved. The builder itself now fails with the exact placeholder name if one of the five replacements is missing.
 
+
+## Metadata and Results regression tests
+
+Run the dependency-free Node.js suite (Node 22 or newer):
+
+```sh
+node --test tests/result-workflow.test.cjs
+```
+
+The suite evaluates actual application functions and a full-script minimal DOM harness with synthetic metadata. It covers intake/restore identity, schema-v1 compatibility, search/filter/paging, displayed selection, review navigation, late callbacks, JA/EN switching, safe empty states, session privacy, original-byte ZIP scope/collisions/size limit, CSV/JSON scope, translation parity, IDs, CSP, and script syntax. It does not decode images, execute TinyCLIP, use a browser, or prove mobile layout/real folder-picker behavior.
+
+Repeat against each generated output, for example in PowerShell:
+
+```powershell
+$env:SORTER_HTML = (Resolve-Path ./index.html).Path
+node --test tests/result-workflow.test.cjs
+Remove-Item Env:SORTER_HTML
+```
+
+For a separately authorized browser pass, use synthetic images to verify folder-picker metadata, keyboard input/Clear focus, narrow/mobile layout, zero matching review items, restore, and exports. The existing accuracy suite remains required for changes to model/categories/classification behavior.

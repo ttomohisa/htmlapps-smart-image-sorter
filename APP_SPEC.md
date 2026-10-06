@@ -49,6 +49,17 @@ Focused review:
 - shows current review position
 - automatically advances after resolving the current review item
 
+## Results search
+
+- A labeled JA/EN search input and Clear action match filename or supplied relative path by trimmed, case-insensitive literal substring.
+- Search intersects All, category, Needs Review, and Failed; pending items remain outside the Results grid.
+- One view predicate drives the grid, 60-card paging, displayed selection, and search-scoped review navigation/auto-advance.
+- Query changes reset paging and the review cursor. Zero matches retain query/filter and expose a specific empty state with Clear.
+- Global counts keep their existing meaning. If hidden review items remain, zero matching reviews must not claim that all review is complete.
+- Select displayed adds only classified cards from the currently rendered page. Hidden existing selections remain selected; bulk actions retain their explicit total-selection scope.
+- ZIP/CSV/JSON retain existing whole-batch scope and exclusions; search never changes scores, manual decisions, error state, or original bytes.
+- Search is ephemeral, survives JA/EN switching, resets on batch clear/restore start, and is excluded from autosave/work JSON.
+
 ## Manual and bulk changes
 
 - Individual cards can accept the AI suggestion or move to another category.
@@ -91,6 +102,10 @@ The browser stores compact metadata only:
 Image bytes and 512-dimensional image embeddings are not persisted.
 
 Restore requires reselecting the same files. Matching uses relative path where available plus filename, byte size, and last-modified timestamp. Work JSON export/import provides an explicit backup path.
+
+Intake identity uses a structured tuple of known normalized relative path (or no path), case-preserved basename, byte size, and timestamp. Distinct known paths are retained; exact repeated identities are deduplicated. Pathless and folder selections are not silently combined.
+
+Restore derives identity from raw saved metadata, retaining schema-v1 compatibility instead of trusting older lowercased/delimited keys. Exact one-to-one matches are reserved before fallback. Metadata-only fallback requires a unique saved candidate and a unique loaded candidate, cannot contradict two known paths, and cannot consume a saved record twice. Ambiguity remains unresolved with localized original-folder reselection guidance. New records carry an optional `hasRelativePath` flag to preserve that distinction; older records infer it from path versus basename. No image content hash, image-byte persistence, score recalculation, or additional analysis is introduced.
 
 ## Regression tooling
 
