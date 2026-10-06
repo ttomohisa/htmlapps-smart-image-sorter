@@ -31,6 +31,7 @@ GitHub Pages serves the initial HTML. After it loads, image processing runs loca
 
 - **Sort up to 500 images at once** — Add individual images or choose a folder.
 - **Predefined category catalog** — Start with eight recommended categories and enable only what you need from the built-in catalog.
+- **Find results quickly** — Search filenames and relative folder paths alongside category, review, and failed filters. Search only changes the view; exports still cover the full batch.
 - **Review only uncertain results** — Images with close or low-scoring candidates are separated into a focused review flow.
 - **Manual and bulk correction** — Move individual images or selected images to another category. Bulk changes require confirmation.
 - **Failure isolation** — A broken or unsupported image does not stop the rest of the batch; failed items can be retried or removed.
@@ -81,11 +82,23 @@ An image is sent to review when its top match is relatively low, when the first 
 
 Decode or inference failures are separated from normal results. Other images continue processing. Failed items can be retried individually or together, or removed from the working set. Failed images are not included in the category ZIP.
 
+### Search results
+
+Use **Search filenames and folders** to find classified or failed items by filename or supplied relative folder path. Matching is a trimmed, case-insensitive literal substring, including punctuation and Japanese text. Search combines with the selected category, Needs Review, or Failed filter; pending images are not Results cards.
+
+The matching count and 60-card pages follow the search. Previous/next review and automatic advance stay within matching review items. **Select displayed** adds only classified cards on the current page, while previously selected hidden items remain selected and included in the total selection count. Existing bulk actions still act on that total selection.
+
+**Clear search** restores the current filter's unsearched view. Search is temporary, survives language switching, and resets when clearing images or starting restore. It is not autosaved or included in work JSON. ZIP, CSV, and JSON keep their existing whole-batch scope regardless of search; ZIP still excludes failed and pending images.
+
 ### Autosave and restore
 
 The app stores category selection, strictness, compact classification results, review state, manual corrections, and file identity metadata in the browser. It does **not** save image bytes or image embeddings.
 
 To restore work, reselect the same files or folder. Matching uses relative path when available, plus filename, size, and last-modified time. Work JSON export/import is available as an explicit backup.
+
+Different known relative paths are kept as separate images even when filename, size, and timestamp match. Paths and filenames retain case; backslashes in supplied paths are normalized. Repeated selections of the same full identity are deduplicated. Selecting the same file individually and through a folder may produce separate entries because a pathless selection does not prove a folder identity.
+
+Restore reads existing schema-v1 work JSON from raw file metadata, including legacy saved keys. Exact identities take priority. A missing-path fallback is allowed only for a unique, one-to-one metadata match, never across conflicting known paths. Ambiguous candidates stay unrestored with a prompt to reselect the original folder; each saved record restores at most one loaded image. No image bytes or hashes are read to establish identity.
 
 ## Fixed categories and developer maintenance
 
