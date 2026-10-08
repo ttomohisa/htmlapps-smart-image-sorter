@@ -62,7 +62,11 @@ jobs:
           )
           $remainingPlaceholders = @($buildPlaceholders | Where-Object { $html.Contains($_) })
           if ($remainingPlaceholders.Count -gt 0) { throw "unresolved build placeholder remains: $($remainingPlaceholders -join ', ')" }
-          if ($html -notmatch 'v1\.0\.0') { throw 'release version is missing from generated HTML' }
+          if ($html -notmatch 'v1\.0\.1') { throw 'release version is missing from generated HTML' }
+          node ./tests/header-normalization.test.mjs src/index.template.html dist/index.html
+          if ($LASTEXITCODE -ne 0) { throw "Header normalization regression failed." }
+          node ./tests/help-dialog.test.cjs src/index.template.html dist/index.html
+          if ($LASTEXITCODE -ne 0) { throw "Help dialog regression failed." }
           New-Item -ItemType File -Force -Path ./dist/.nojekyll | Out-Null
           Write-Host "Standalone size: $([math]::Round((Get-Item ./dist/index.html).Length / 1MB, 1)) MB"
 
