@@ -2,7 +2,7 @@
 
 ## Release
 
-- Version: **1.0.0**
+- Version: **1.0.1**
 - Distribution: single standalone HTML
 - Primary UI languages: Japanese / English
 - Maximum images per batch: 500
@@ -141,3 +141,8 @@ Normal builds do not use Python, uv, the full TinyCLIP model, or tokenizer asset
 - No runtime HTTP/HTTPS connection from the standalone app.
 - ZIP/CSV/JSON exports are generated locally.
 - The hosted demo requires only the initial HTML delivery.
+
+## Header normalization (1.0.1)
+
+- The language control shows EN in Japanese and JA in English, with a destination title and accessible name localized to the current UI language. Existing header Help attributes are localized.
+- Existing Japanese local-processing badges use 完全ローカル処理, with accurate English wording retained. Layout, processing boundaries, persistence, model/camera behavior, and their existing limitations are unchanged.

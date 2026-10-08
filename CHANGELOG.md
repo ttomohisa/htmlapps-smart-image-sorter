@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.1 - 2026-10-08
+
+- Normalize header EN / JA labels and localized language/Help tooltips and accessible names.
+- Keep the visible app version and release metadata synchronized; normalize existing Japanese local-processing badges without changing processing behavior.
+
 ## 1.0.0 - 2026-08-29
 
 Initial public release.
