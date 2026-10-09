@@ -2,7 +2,7 @@
 
 ## Release
 
-- Version: **1.0.1**
+- Version: **1.0.2**
 - Distribution: single standalone HTML
 - Primary UI languages: Japanese / English
 - Maximum images per batch: 500
