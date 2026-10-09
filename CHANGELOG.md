@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.3 - 2026-10-09
+
+- Add the canonical default screenshot path for catalog checks, preserving the existing Japanese screenshot bytes.
+
 ## 1.0.2 - 2026-10-09
 
 - Refresh the app icon, header artwork, and standalone favicon with the supplied Smart Image Sorter design.

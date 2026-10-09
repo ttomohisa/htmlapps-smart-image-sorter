@@ -19,6 +19,8 @@ GitHub Pages serves the initial HTML. After it loads, image processing runs loca
 
 ## Screenshots
 
+`assets/screenshot.png` is the canonical catalog copy of the existing Japanese screenshot (`assets/screenshot-ja.png`).
+
 ### English UI
 
 ![Smart Image Sorter English UI showing sorting results and the needs-review flow](assets/screenshot-en.png)
@@ -166,6 +168,7 @@ If Pages has not been enabled yet, the build succeeds and the workflow summary e
 ├─ schemas/app-config.schema.json
 ├─ assets/
 │  ├─ favicon.svg
+│  ├─ screenshot.png
 │  ├─ screenshot-en.png
 │  └─ screenshot-ja.png
 ├─ data/
