@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.2 - 2026-10-09
+
+- Refresh the app icon, header artwork, and standalone favicon with the supplied Smart Image Sorter design.
+
 ## 1.0.1 - 2026-10-08
 
 - Normalize header EN / JA labels and localized language/Help tooltips and accessible names.

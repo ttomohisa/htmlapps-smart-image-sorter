@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
@@ -10,6 +11,11 @@ import { test } from 'node:test';
 const app = 'smart-image-sorter';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const config = JSON.parse(fs.readFileSync(path.join(root, 'app.config.json'), 'utf8'));
+const icon = fs.readFileSync(path.join(root, 'assets/favicon.svg'), 'utf8');
+test('app icon preserves the supplied artwork bytes and native viewBox', () => {
+  assert.equal(createHash('sha256').update(icon).digest('hex'), '127b334fc088a1588af9f84e2402c4dbf3a4e042120b9f2206e519787b66c4fa');
+  assert.match(icon, /viewBox="0 0 1095 1095"/);
+});
 const targets = process.argv.slice(2);
 if (!targets.length) targets.push('src/index.template.html');
 const video = app === 'video-face-redactor';
@@ -39,6 +45,15 @@ function element(tag) {
 }
 for (const target of targets) {
   const html = fs.readFileSync(path.resolve(root, target), 'utf8');
+  test(`${target}: header and favicon embed the exact app artwork`, () => {
+    const headerIcon = html.match(/<div class="brand-mark" aria-hidden="true">(.*?)<\/div>/s)?.[1];
+    assert.equal(headerIcon, icon);
+    const favicon = html.match(/<link rel="icon"[^>]*href="([^"]+)"/)?.[1];
+    assert.ok(favicon?.startsWith('data:image/svg+xml,'), 'favicon stays self-contained');
+    assert.equal(decodeURIComponent(favicon.slice('data:image/svg+xml,'.length)), icon);
+    assert.match(html, /\.brand-mark svg\{width:100%;height:100%\}/);
+  });
+
   test(`${target}: three-part header version matches app metadata`, () => {
     assert.match(config.version, /^\d+\.\d+\.\d+$/);
     assert.equal(html.match(/class="(?:version-badge|version)"[^>]*>([^<]+)/)?.[1], `v${config.version}`);
