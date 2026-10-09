@@ -2,7 +2,7 @@
 
 ## Release
 
-- Version: **1.0.3**
+- Version: **1.0.4**
 - Distribution: single standalone HTML
 - Primary UI languages: Japanese / English
 - Maximum images per batch: 500
@@ -147,3 +147,7 @@ Normal builds do not use Python, uv, the full TinyCLIP model, or tokenizer asset
 - The language control shows EN in Japanese and JA in English, with a destination title and accessible name localized to the current UI language. Existing header Help attributes are localized.
 - Help closes when a click targets the backdrop outside the dialog rectangle. Inside clicks keep it open, and dismissal returns focus to the Help button.
 - Existing Japanese local-processing badges use 完全ローカル処理, with accurate English wording retained. Layout, processing boundaries, persistence, model/camera behavior, and their existing limitations are unchanged.
+
+## Brand icon consistency
+
+- Brand backgrounds use #16624f with corner radii equal to exactly 25% of each background axis. Preserve foreground artwork, placement, and existing canvas padding across SVG assets, app headers, and embedded favicons.

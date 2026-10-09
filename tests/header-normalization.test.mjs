@@ -12,8 +12,8 @@ const app = 'smart-image-sorter';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const config = JSON.parse(fs.readFileSync(path.join(root, 'app.config.json'), 'utf8'));
 const icon = fs.readFileSync(path.join(root, 'assets/favicon.svg'), 'utf8');
-test('app icon preserves the supplied artwork bytes and native viewBox', () => {
-  assert.equal(createHash('sha256').update(icon).digest('hex'), '127b334fc088a1588af9f84e2402c4dbf3a4e042120b9f2206e519787b66c4fa');
+test('app icon preserves supplied foreground artwork and native viewBox after background normalization', () => {
+  assert.equal(createHash('sha256').update(icon.replace(/<rect[^>]*\/>/, "<path fill=\"#086a53\" d=\"M225 46q31-1 63 0H820q30-1 61 1 41 6 75 27 76 46 96 133 5 33 4 67V852q0 20-1 39-12 81-76 133-43 32-97 41-18 1-36 1H260q-27 1-54-2c-54-9-105-43-134-89q-26-39-32-85-2-33 0-68V298q-4-52 6-102C62 137 105 89 159 64q31-15 66-18\"/>").replaceAll('#16624f', '#086a53')).digest('hex'), '127b334fc088a1588af9f84e2402c4dbf3a4e042120b9f2206e519787b66c4fa');
   assert.match(icon, /viewBox="0 0 1095 1095"/);
 });
 const targets = process.argv.slice(2);
