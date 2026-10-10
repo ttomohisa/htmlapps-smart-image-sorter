@@ -80,11 +80,50 @@ test('Close button and the native close event share opener focus restoration', (
   assert.equal(opener.focused, true);
 });
 
+// These CSS contracts complement, rather than replace, native wheel/geometry checks.
+const css = html.match(/<style>([\s\S]*?)<\/style>/)[1];
+const rule = selector => [...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)].filter(([, selectors]) => selectors.split(',').map(s => s.trim()).includes(selector)).map(([, , declarations]) => declarations).join(';');
+test('modal Help locks both scrolling roots without locking closed Help', () => {
+  for (const root of ['html', 'body']) assert.match(rule(`${root}:has(#helpDialog:modal)`), /overflow\s*:\s*hidden/);
+});
+test('Help allocates its fixed header and shrinking scroll body within the viewport', () => {
+  assert.match(rule('#helpDialog[open]'), /display\s*:\s*flex/);
+  assert.match(rule('#helpDialog[open]'), /flex-direction\s*:\s*column/);
+  assert.match(rule('#helpDialog[open]'), /max-height\s*:\s*calc\(100dvh - 28px\)/);
+  assert.match(rule('#helpDialog[open]'), /overflow\s*:\s*hidden/);
+  assert.match(rule('#helpDialog > .dialog-header'), /flex\s*:\s*0 0 auto/);
+  assert.match(rule('#helpDialog > .dialog-body'), /min-height\s*:\s*0/);
+  assert.match(rule('#helpDialog > .dialog-body'), /flex\s*:\s*1 1 auto/);
+  assert.match(rule('.dialog-body'), /overflow\s*:\s*auto/);
+  assert.match(rule('#helpDialog[open]'), /max-height\s*:\s*85dvh/);
+});
+test('narrow title and version can wrap without hiding the version or shrinking header actions', () => {
+  assert.doesNotMatch(rule('.version-badge'), /display\s*:\s*none/);
+  assert.match(rule('.brand-name'), /flex-wrap\s*:\s*wrap/);
+  assert.match(rule('.brand-name'), /white-space\s*:\s*normal/);
+  assert.match(rule('.version-badge'), /flex\s*:\s*0 0 auto/);
+  assert.match(rule('.header-actions'), /flex-shrink\s*:\s*0/);
+});
+test('localized Help explains its scrolling and reachable Close control', () => {
+  assert.match(html, /data-i18n="helpScroll"/);
+  assert.match(html, /helpScroll:'ヘルプ内をスクロールしている間も閉じるボタンを使えます。背景ページは動きません。'/);
+  assert.match(html, /helpScroll:'Scroll within Help while its Close button stays reachable\. The background page stays in place\.'/);
+});
+
 }
 
 test('all publishing workflows require the Help regression after building', () => {
   for (const name of ['build-standalone.yml', 'deploy-pages.yml', 'preview.yml']) {
     const yaml = fs.readFileSync(path.join(root, '.github/workflows', name), 'utf8');
     assert.match(yaml, /node \.\/tests\/help-dialog\.test\.cjs src\/index\.template\.html dist\/index\.html/);
+  }
+});
+
+
+test('publishing version guards match app.config.json', () => {
+  const version = JSON.parse(fs.readFileSync(path.join(root, 'app.config.json'), 'utf8')).version;
+  for (const name of ['build-standalone.yml', 'deploy-pages.yml', 'preview.yml']) {
+    const yaml = fs.readFileSync(path.join(root, '.github/workflows', name), 'utf8');
+    assert.ok(yaml.includes("'v" + version.split('.').join('\\.') + "'"), `${name} release guard must match ${version}`);
   }
 });
