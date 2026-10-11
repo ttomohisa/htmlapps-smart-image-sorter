@@ -104,10 +104,10 @@ test('narrow title and version can wrap without hiding the version or shrinking 
   assert.match(rule('.version-badge'), /flex\s*:\s*0 0 auto/);
   assert.match(rule('.header-actions'), /flex-shrink\s*:\s*0/);
 });
-test('localized Help explains its scrolling and reachable Close control', () => {
-  assert.match(html, /data-i18n="helpScroll"/);
-  assert.match(html, /helpScroll:'ヘルプ内をスクロールしている間も閉じるボタンを使えます。背景ページは動きません。'/);
-  assert.match(html, /helpScroll:'Scroll within Help while its Close button stays reachable\. The background page stays in place\.'/);
+test('Help omits implementation commentary and retains user instructions', () => {
+  assert.doesNotMatch(html, /data-i18n="helpScroll"/);
+  assert.doesNotMatch(html, /helpScroll:'ヘルプ内をスクロールしている間も閉じるボタンを使えます。背景ページは動きません。'/);
+  assert.doesNotMatch(html, /helpScroll:'Scroll within Help while its Close button stays reachable\. The background page stays in place\.'/);
 });
 
 }

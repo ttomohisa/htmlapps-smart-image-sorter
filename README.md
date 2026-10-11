@@ -234,5 +234,3 @@ Bug reports and feature proposals are welcome through GitHub Issues. See [CONTRI
 Copyright © 2026 ttomohisa
 
 Licensed under the [MIT License](LICENSE).
-
-Help keeps its Close button reachable while its contents scroll, and keeps the background page in place until dismissed. The version remains visible in narrow headers.
