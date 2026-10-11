@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.5 - 2026-10-10
+
+- Keep modal Help within short and narrow viewports with a fixed header and scrollable body, and prevent background page scrolling while it is open.
+- Keep the narrow header version visible with wrapping title/version and stable utility controls.
+- Add Help layout regression contracts to the existing source/generated CI gate.
+
 ## 1.0.4 - 2026-10-09
 
 - Normalize brand icon backgrounds to #16624f with exact 25% corner radii across SVG assets, header icons, and embedded favicons, preserving existing artwork.
