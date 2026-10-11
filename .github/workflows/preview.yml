@@ -81,6 +81,10 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "Header normalization regression failed." }
           node ./tests/help-dialog.test.cjs src/index.template.html dist/index.html
           if ($LASTEXITCODE -ne 0) { throw "Help dialog regression failed." }
+          $env:SORTER_HTML = './dist/index.html'
+          node --test ./tests/result-workflow.test.cjs
+          if ($LASTEXITCODE -ne 0) { throw "Results workflow regression failed." }
+          Remove-Item Env:SORTER_HTML
           New-Item -ItemType File -Force -Path ./dist/.nojekyll | Out-Null
           Write-Host "Standalone size: $([math]::Round((Get-Item ./dist/index.html).Length / 1MB, 1)) MB"
 

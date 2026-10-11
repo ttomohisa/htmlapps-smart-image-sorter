@@ -155,3 +155,5 @@ Normal builds do not use Python, uv, the full TinyCLIP model, or tokenizer asset
 ## Responsive Help
 
 Modal Help locks background page scrolling. Its header stays visible while its body scrolls within the desktop or mobile bottom-sheet bounds. Closing Help restores page scrolling and the existing opener focus. Narrow headers wrap the title/version instead of hiding the version; language and Help actions remain available.
+
+- After bulk changes or a download closes More, keyboard focus returns to the available Select visible button or More summary only when the completed action still owns focus; newer dialogs and other focused controls are preserved, and the bulk destination accessible name follows JA/EN.
