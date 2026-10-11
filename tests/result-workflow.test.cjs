@@ -211,8 +211,8 @@ test('translation keys, static IDs, CSP and application JavaScript stay valid',(
 
 // Native focus transfer/blur and click bubbling are modeled here; layout and real
 // download navigation remain browser QA. Production handlers run unchanged.
-function bootApp({retainInvalidFocus=false}={}) {
-  const nodes=new Map(),staticNodes=[],documentListeners=new Map(),downloads=[];
+function bootApp({retainInvalidFocus=false,retainClosedDetailsRects=false}={}) {
+  const nodes=new Map(),staticNodes=[],documentListeners=new Map(),downloads=[],nativeFocusUpdates=[];
   const document={documentElement:{},activeElement:null,
     addEventListener(type,fn){if(!documentListeners.has(type))documentListeners.set(type,[]);documentListeners.get(type).push(fn)},
     dispatch(type,event){for(const fn of documentListeners.get(type)||[])fn(event)}};
@@ -223,13 +223,17 @@ function bootApp({retainInvalidFocus=false}={}) {
       if(!node.isConnected)return[];
       for(let at=node;at;at=at.parentElement){
         if(at.hidden||at.tagName==='DIALOG'&&!at.open)return[];
-        if(at.tagName==='DETAILS'&&!at.open&&at!==node&&node!==at.children.find(x=>x.tagName==='SUMMARY'))return[];
+        if(!retainClosedDetailsRects&&at.tagName==='DETAILS'&&!at.open&&at!==node&&node!==at.children.find(x=>x.tagName==='SUMMARY'))return[];
       }
       return[{}];
     };
     node.focus=()=>{if(!node.disabled&&node.getClientRects().length){node.focused=true;document.activeElement=node}};
     for(const key of ['disabled','hidden','open']) {
       let value=false;Object.defineProperty(node,key,{get:()=>value,set(next){value=next;
+        if(key==='open'&&!next&&node.tagName==='DETAILS'&&retainClosedDetailsRects&&!retainInvalidFocus){
+          const previous=document.activeElement;
+          if(node.contains(previous)&&previous!==node.querySelector('summary'))nativeFocusUpdates.push(()=>{if(document.activeElement===previous)document.activeElement=document.body});
+        }
         if(!retainInvalidFocus&&node.contains(document.activeElement)&&
           (node.disabled||!document.activeElement.getClientRects().length))document.activeElement=document.body;
       }});
@@ -276,7 +280,7 @@ function bootApp({retainInvalidFocus=false}={}) {
   script=script.replace(/const assetBundle=[^\n]+;/,'const assetBundle={};');
   const close=script.lastIndexOf('})();');assert.ok(close>0);
   script=script.slice(0,close)+`globalThis.testApi={setImages(value){images=value},getQuery(){return resultSearchQuery},getFilter(){return filter},getImages(){return images},renderResults,beginWorkSessionRestore,makeWorkSession};`+script.slice(close);
-  vm.runInContext(script,context);return{ctx:context,api:context.testApi,$,document,downloads,requestedAssets:()=>requestedAssets};
+  vm.runInContext(script,context);return{ctx:context,api:context.testApi,$,document,downloads,finishNativeFocusUpdates(){for(const update of nativeFocusUpdates.splice(0))update()},requestedAssets:()=>requestedAssets};
 }
 test('full app event wiring preserves typed search through EN/JA switching and Clear',()=>{
   const h=bootApp();h.api.setImages(mixed());h.api.renderResults();const input=h.$('#resultSearchInput');input.value='旅行';input.oninput({target:input});assert.equal(h.api.getQuery(),'旅行');assert.equal(h.$('#imageGrid').children.length,1);assert.equal(h.$('#resultSearchCount').textContent,'1 matching results');
@@ -347,8 +351,8 @@ for(const id of ['csvButton','jsonButton']) {
     }
   });
   test(`actual ${id} download does not steal newer modal or unrelated focus`,()=>{
-    for(const next of ['modal','modal with body focus','input','disabled fallback','hidden fallback','removed fallback']) {
-      const h=selectedBulkApp(),more=h.$('.export-more');more.open=true;h.$('#'+id).focus();let expected=h.document.body;
+    for(const retainClosedDetailsRects of [false,true])for(const next of ['modal','modal with body focus','input','disabled fallback','hidden fallback','removed fallback']) {
+      const h=selectedBulkApp({retainClosedDetailsRects}),more=h.$('.export-more');more.open=true;h.$('#'+id).focus();let expected=h.document.body;
       h.document.addEventListener('click',event=>{
         if(event.target.tagName!=='A')return;
         if(next.startsWith('modal')){h.$('#helpButton').onclick();h.$('#closeHelpButton').focus();expected=h.$('#closeHelpButton');if(next==='modal with body focus'){h.document.activeElement=h.document.body;expected=h.document.body}}
@@ -357,7 +361,7 @@ for(const id of ['csvButton','jsonButton']) {
         if(next==='hidden fallback')more.hidden=true;
         if(next==='removed fallback')more.querySelector('summary').isConnected=false;
       });
-      h.$('#'+id).click();assertFocus(h,expected,next);assert.equal(h.downloads.length,1);
+      h.$('#'+id).click();h.finishNativeFocusUpdates();assertFocus(h,expected,next);assert.equal(h.downloads.length,1);
     }
   });
 }
@@ -395,3 +399,17 @@ test('all publishing workflows run Results regressions against the generated sta
     }
   }
 });
+
+// Native Chromium QA showed closed More children keep nonzero layout rects;
+// focus cleanup can follow the download click rather than the open=false write.
+for(const id of ['csvButton','jsonButton']) {
+  test(`actual ${id} restores closed-More ownership even while its hidden button retains layout rects`,()=>{
+    for(const retainInvalidFocus of [false,true]) {
+      const h=selectedBulkApp({retainInvalidFocus,retainClosedDetailsRects:true}),more=h.$('.export-more'),opener=h.$('#'+id);
+      more.open=true;opener.focus();opener.click();
+      assert.equal(more.open,false);assert.equal(opener.getClientRects().length,1);
+      h.finishNativeFocusUpdates();assertFocus(h,more.querySelector('summary'));
+      assert.equal(h.downloads.length,1);assert.equal(more.open,false);
+    }
+  });
+}
