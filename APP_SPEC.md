@@ -2,7 +2,7 @@
 
 ## Release
 
-- Version: **1.0.4**
+- Version: **1.0.5**
 - Distribution: single standalone HTML
 - Primary UI languages: Japanese / English
 - Maximum images per batch: 500
@@ -151,3 +151,9 @@ Normal builds do not use Python, uv, the full TinyCLIP model, or tokenizer asset
 ## Brand icon consistency
 
 - Brand backgrounds use #16624f with corner radii equal to exactly 25% of each background axis. Preserve foreground artwork, placement, and existing canvas padding across SVG assets, app headers, and embedded favicons.
+
+## Responsive Help
+
+Modal Help locks background page scrolling. Its header stays visible while its body scrolls within the desktop or mobile bottom-sheet bounds. Closing Help restores page scrolling and the existing opener focus. Narrow headers wrap the title/version instead of hiding the version; language and Help actions remain available.
+
+- After bulk changes or a download closes More, keyboard focus returns to the available Select visible button or More summary only when the completed action still owns focus; newer dialogs and other focused controls are preserved, and the bulk destination accessible name follows JA/EN.

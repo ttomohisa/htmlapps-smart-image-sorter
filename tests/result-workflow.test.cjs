@@ -209,18 +209,68 @@ test('translation keys, static IDs, CSP and application JavaScript stay valid',(
   new vm.Script(script);
 });
 
-function bootApp() {
-  const nodes=new Map(),staticNodes=[];
-  const markup=html.slice(0,html.indexOf('<script>'));
-  for(const match of markup.matchAll(/<([a-z][a-z0-9-]*)\b([^>]*)>/gi)) {
-    const node=element(match[1]);for(const attribute of match[2].matchAll(/([\w-]+)="([^"]*)"/g)) {const [,name,value]=attribute;node.attributes[name]=value;if(name==='id')nodes.set('#'+value,node);if(name.startsWith('data-'))node.dataset[name.slice(5).replace(/-([a-z])/g,(_,x)=>x.toUpperCase())]=value}
-    staticNodes.push(node);
+// Native focus transfer/blur and click bubbling are modeled here; layout and real
+// download navigation remain browser QA. Production handlers run unchanged.
+function bootApp({retainInvalidFocus=false,retainClosedDetailsRects=false}={}) {
+  const nodes=new Map(),staticNodes=[],documentListeners=new Map(),downloads=[],nativeFocusUpdates=[];
+  const document={documentElement:{},activeElement:null,
+    addEventListener(type,fn){if(!documentListeners.has(type))documentListeners.set(type,[]);documentListeners.get(type).push(fn)},
+    dispatch(type,event){for(const fn of documentListeners.get(type)||[])fn(event)}};
+  function createElement(tag) {
+    const node=element(tag),listeners=new Map();node.isConnected=true;node.parentElement=null;
+    node.contains=other=>{for(let at=other;at;at=at.parentElement)if(at===node)return true;return false};
+    node.getClientRects=()=>{
+      if(!node.isConnected)return[];
+      for(let at=node;at;at=at.parentElement){
+        if(at.hidden||at.tagName==='DIALOG'&&!at.open)return[];
+        if(!retainClosedDetailsRects&&at.tagName==='DETAILS'&&!at.open&&at!==node&&node!==at.children.find(x=>x.tagName==='SUMMARY'))return[];
+      }
+      return[{}];
+    };
+    node.focus=()=>{if(!node.disabled&&node.getClientRects().length){node.focused=true;document.activeElement=node}};
+    for(const key of ['disabled','hidden','open']) {
+      let value=false;Object.defineProperty(node,key,{get:()=>value,set(next){value=next;
+        if(key==='open'&&!next&&node.tagName==='DETAILS'&&retainClosedDetailsRects&&!retainInvalidFocus){
+          const previous=document.activeElement;
+          if(node.contains(previous)&&previous!==node.querySelector('summary'))nativeFocusUpdates.push(()=>{if(document.activeElement===previous)document.activeElement=document.body});
+        }
+        if(!retainInvalidFocus&&node.contains(document.activeElement)&&
+          (node.disabled||!document.activeElement.getClientRects().length))document.activeElement=document.body;
+      }});
+    }
+    node.append=(...children)=>{for(const child of children){child.parentElement=node;child.isConnected=true;node.children.push(child)}};
+    node.replaceChildren=(...children)=>{for(const child of node.children){if(child.contains?.(document.activeElement)&&!retainInvalidFocus)document.activeElement=document.body;child.parentElement=null;child.isConnected=false}node.children=[];node.append(...children)};
+    node.addEventListener=(type,fn)=>{if(!listeners.has(type))listeners.set(type,[]);listeners.get(type).push(fn)};
+    node.dispatch=(type,event={})=>{for(const fn of listeners.get(type)||[])fn(event)};
+    node.showModal=()=>{node.returnFocus=document.activeElement;node.open=true;(node.children.flatMap(x=>x.children).find(x=>x.tagName==='BUTTON')||node).focus()};
+    node.close=()=>{node.open=false;node.returnFocus?.focus();node.dispatch('close')};
+    node.querySelector=selector=>selector==='summary'?node.children.find(x=>x.tagName==='SUMMARY')||null:null;
+    node.click=()=>{const result=node.onclick?.({target:node,stopPropagation:noop});if(node.tagName==='A')downloads.push(node);document.dispatch('click',{target:node});return result};
+    node.remove=()=>{node.isConnected=false;if(document.activeElement===node)document.activeElement=document.body};
+    return node;
   }
-  const $=selector=>{if(!nodes.has(selector))nodes.set(selector,element());return nodes.get(selector)};
+  document.createElement=createElement;
+  const markup=html.slice(0,html.indexOf('<script>')),stack=[];
+  for(const match of markup.matchAll(/<(\/?)([a-z][a-z0-9-]*)\b([^>]*)>/gi)) {
+    const [,closing,tag,attributes]=match;
+    if(closing){while(stack.length&&stack.pop().tagName!==tag.toUpperCase()){}continue}
+    const node=createElement(tag);for(const attribute of attributes.matchAll(/([\w-]+)="([^"]*)"/g)) {const [,name,value]=attribute;node.attributes[name]=value;if(name==='id')nodes.set('#'+value,node);if(name.startsWith('data-'))node.dataset[name.slice(5).replace(/-([a-z])/g,(_,x)=>x.toUpperCase())]=value}
+    if(tag==='body'){document.body=node;document.activeElement=node}
+    if(stack.length)stack.at(-1).append(node);
+    staticNodes.push(node);
+    if(!/\/$/.test(attributes)&&!['area','base','br','col','embed','hr','img','input','link','meta','param','source','track','wbr'].includes(tag))stack.push(node);
+  }
+  const $=selector=>{
+    if(selector==='dialog[open]')return staticNodes.find(x=>x.tagName==='DIALOG'&&x.open)||null;
+    if(selector==='.export-more')return staticNodes.find(x=>x.tagName==='DETAILS'&&x.attributes.class==='export-more')||null;
+    if(selector==='.export-more>summary')return $('.export-more').querySelector('summary');
+    if(!nodes.has(selector))nodes.set(selector,createElement('div'));return nodes.get(selector);
+  };
   const $$=selector=>{const attr=/^\[([\w-]+)\]$/.exec(selector)?.[1];return attr?staticNodes.filter(x=>Object.hasOwn(x.attributes,attr)):[]};
+  document.querySelector=$;document.querySelectorAll=$$;
   const saved=new Map();let requestedAssets=0;
   const context=vm.createContext({console,Blob,TextEncoder,TextDecoder,URL,Uint8Array,Uint32Array,DataView,Date,Math,JSON,Number,Set,Map,Array,Object,String,Boolean,URLSearchParams,
-    document:{querySelector:$,querySelectorAll:$$,createElement:element,documentElement:{},addEventListener:noop},
+    document,
     window:{addEventListener:noop,scrollTo:noop,fetch:()=>{requestedAssets++;throw new Error('No runtime network in test')}},
     localStorage:{getItem:key=>saved.get(key)||null,setItem:(key,value)=>saved.set(key,value),removeItem:key=>saved.delete(key)},
     navigator:{language:'en'},location:{hash:'',search:''},requestAnimationFrame:fn=>fn(),setTimeout:()=>1,clearTimeout:noop,CSS:{escape:x=>x},innerWidth:375});
@@ -230,7 +280,7 @@ function bootApp() {
   script=script.replace(/const assetBundle=[^\n]+;/,'const assetBundle={};');
   const close=script.lastIndexOf('})();');assert.ok(close>0);
   script=script.slice(0,close)+`globalThis.testApi={setImages(value){images=value},getQuery(){return resultSearchQuery},getFilter(){return filter},getImages(){return images},renderResults,beginWorkSessionRestore,makeWorkSession};`+script.slice(close);
-  vm.runInContext(script,context);return{ctx:context,api:context.testApi,$,requestedAssets:()=>requestedAssets};
+  vm.runInContext(script,context);return{ctx:context,api:context.testApi,$,document,downloads,finishNativeFocusUpdates(){for(const update of nativeFocusUpdates.splice(0))update()},requestedAssets:()=>requestedAssets};
 }
 test('full app event wiring preserves typed search through EN/JA switching and Clear',()=>{
   const h=bootApp();h.api.setImages(mixed());h.api.renderResults();const input=h.$('#resultSearchInput');input.value='旅行';input.oninput({target:input});assert.equal(h.api.getQuery(),'旅行');assert.equal(h.$('#imageGrid').children.length,1);assert.equal(h.$('#resultSearchCount').textContent,'1 matching results');
@@ -250,3 +300,116 @@ test('an older review callback cannot undo a query reset even if the query retur
   const callbacks=[];const images=['one','two'].map(id=>classified(file({name:`yes-${id}.png`}),id,{review:true}));
   const h=viewHarness({images,filter:'__review__',resultSearchQuery:'yes',requestAnimationFrame:fn=>callbacks.push(fn)});h.ctx.afterReviewDecision(true);h.ctx.setResultSearch('absent');h.ctx.setResultSearch('yes');callbacks.shift()();assert.equal(h.ctx.lastReviewJumpId,null);
 });
+
+
+function assertFocus(h,expected,message='focus target') {assert.ok(h.document.activeElement===expected,`${message}: expected ${expected?.attributes.id||expected?.tagName}, got ${h.document.activeElement?.attributes.id||h.document.activeElement?.tagName}`)}
+function selectedBulkApp(options) {
+  const h=bootApp(options);h.api.setImages(mixed().slice(0,2));h.api.renderResults();
+  h.$('#selectVisibleButton').click();const select=h.$('#bulkCategorySelect');select.value='document';select.onchange();
+  h.$('#bulkApplyButton').focus();return h;
+}
+test('actual bulk-confirm completion leaves focus on Select visible after Apply becomes disabled',async()=>{
+  for(const retainInvalidFocus of [false,true]) {
+    const h=selectedBulkApp({retainInvalidFocus}),pending=h.$('#bulkApplyButton').click();
+    assert.equal(h.$('#confirmDialog').open,true);h.$('#confirmOk').focus();h.$('#confirmOk').click();await pending;
+    assertFocus(h,h.$('#selectVisibleButton'));
+    assert.equal(h.$('#bulkApplyButton').disabled,true);assert.equal(h.$('#bulkCategorySelect').value,'document');
+    assert.deepEqual(Array.from(h.api.getImages(),x=>x.manualCategoryId),['document','document']);
+    assert.equal(h.api.getQuery(),'');assert.equal(h.api.getFilter(),'all');assert.equal(h.requestedAssets(),0);
+  }
+});
+test('bulk cancellation and native Escape keep selection, values, and opener focus',async()=>{
+  for(const cancel of ['#confirmCancel','#confirmClose','escape']) {
+    const h=selectedBulkApp(),before=JSON.stringify(h.api.getImages()),pending=h.$('#bulkApplyButton').click();
+    if(cancel==='escape')h.$('#confirmDialog').dispatch('cancel',{preventDefault:noop});else h.$(cancel).click();await pending;
+    assertFocus(h,h.$('#bulkApplyButton'));assert.equal(h.$('#bulkApplyButton').disabled,false);
+    assert.equal(h.$('#selectionCount').textContent,'2 selected');assert.equal(h.$('#bulkCategorySelect').value,'document');assert.equal(JSON.stringify(h.api.getImages()),before);
+  }
+});
+test('bulk completion preserves newer modal focus, valid input focus, and unavailable fallback controls',async()=>{
+  for(const next of ['modal','modal with body focus','input','disabled fallback','hidden fallback','hidden results panel','removed fallback']) {
+    const h=selectedBulkApp(),pending=h.$('#bulkApplyButton').click();h.$('#confirmOk').click();
+    let expected=h.document.body;
+    if(next.startsWith('modal')){h.$('#helpButton').click();h.$('#closeHelpButton').focus();expected=h.$('#closeHelpButton');if(next==='modal with body focus'){h.document.activeElement=h.document.body;expected=h.document.body}}
+    if(next==='input'){h.$('#resultSearchInput').value='keep this';h.$('#resultSearchInput').focus();expected=h.$('#resultSearchInput')}
+    if(next==='disabled fallback')h.$('#selectVisibleButton').disabled=true;
+    if(next==='hidden fallback')h.$('#selectVisibleButton').hidden=true;
+    if(next==='hidden results panel')h.$('#resultContent').parentElement.hidden=true;
+    if(next==='removed fallback')h.$('#selectVisibleButton').isConnected=false;
+    await pending;assertFocus(h,expected,next);
+    if(next==='input')assert.equal(h.$('#resultSearchInput').value,'keep this');
+    if(next.startsWith('modal'))assert.equal(h.$('#helpDialog').open,true);
+    assert.equal(h.$('#bulkApplyButton').disabled,true);
+  }
+});
+for(const id of ['csvButton','jsonButton']) {
+  test(`actual ${id} download closes More and focuses its visible summary`,()=>{
+    for(const retainInvalidFocus of [false,true]) {
+      const h=selectedBulkApp({retainInvalidFocus}),more=h.$('.export-more');more.open=true;h.$('#'+id).focus();
+      h.$('#'+id).click();assert.equal(more.open,false);assertFocus(h,more.querySelector('summary'));
+      assert.equal(h.downloads.length,1);assert.equal(h.downloads[0].download,`smart-image-sorter.${id==='csvButton'?'csv':'json'}`);assert.equal(h.requestedAssets(),0);
+    }
+  });
+  test(`actual ${id} download does not steal newer modal or unrelated focus`,()=>{
+    for(const retainClosedDetailsRects of [false,true])for(const next of ['modal','modal with body focus','input','disabled fallback','hidden fallback','removed fallback']) {
+      const h=selectedBulkApp({retainClosedDetailsRects}),more=h.$('.export-more');more.open=true;h.$('#'+id).focus();let expected=h.document.body;
+      h.document.addEventListener('click',event=>{
+        if(event.target.tagName!=='A')return;
+        if(next.startsWith('modal')){h.$('#helpButton').onclick();h.$('#closeHelpButton').focus();expected=h.$('#closeHelpButton');if(next==='modal with body focus'){h.document.activeElement=h.document.body;expected=h.document.body}}
+        if(next==='input'){h.$('#resultSearchInput').focus();expected=h.$('#resultSearchInput')}
+        if(next==='disabled fallback')more.querySelector('summary').disabled=true;
+        if(next==='hidden fallback')more.hidden=true;
+        if(next==='removed fallback')more.querySelector('summary').isConnected=false;
+      });
+      h.$('#'+id).click();h.finishNativeFocusUpdates();assertFocus(h,expected,next);assert.equal(h.downloads.length,1);
+    }
+  });
+}
+test('actual EN/JA language switching localizes the bulk destination accessible name without changing its selection',()=>{
+  const h=selectedBulkApp(),select=h.$('#bulkCategorySelect');
+  for(const expected of ['Bulk destination','一括変更先','Bulk destination','一括変更先']) {
+    assert.equal(select.getAttribute('aria-label'),expected);assert.equal(select.value,'document');assert.equal(h.$('#selectionCount').textContent.startsWith('2'),true);
+    h.$('#languageButton').click();
+  }
+});
+
+test('bulk completion recovers dialog-owned or detached-opener focus after the native close',async()=>{
+  for(const next of ['dialog','removed opener']) {
+    const h=selectedBulkApp({retainInvalidFocus:true}),pending=h.$('#bulkApplyButton').click();h.$('#confirmOk').click();
+    if(next==='dialog')h.document.activeElement=h.$('#confirmOk');else h.$('#bulkApplyButton').isConnected=false;
+    await pending;assertFocus(h,h.$('#selectVisibleButton'),next);
+  }
+});
+test('repeated exports and bulk confirmations keep keyboard continuation available',async()=>{
+  const h=selectedBulkApp();
+  for(let i=0;i<2;i++) {
+    h.$('#selectVisibleButton').click();h.$('#bulkApplyButton').focus();const pending=h.$('#bulkApplyButton').click();h.$('#confirmOk').click();await pending;
+    assertFocus(h,h.$('#selectVisibleButton'));
+    for(const id of ['csvButton','jsonButton']){h.$('.export-more').open=true;h.$('#'+id).focus();h.$('#'+id).click();assertFocus(h,h.$('.export-more').querySelector('summary'))}
+  }
+  assert.equal(h.downloads.length,4);assert.equal(h.$('#selectionCount').textContent,'0 selected');
+});
+
+test('all publishing workflows run Results regressions against the generated standalone HTML',()=>{
+  for(const name of ['build-standalone.yml','deploy-pages.yml','preview.yml']) {
+    const original=fs.readFileSync(path.join(root,'.github/workflows',name),'utf8');
+    for(const newline of ['\n','\r\n']) {
+    const yaml=original.replace(/\r?\n/g,newline);
+    assert.match(yaml.replace(/\r\n/g,'\n'),/node \.\/tests\/help-dialog\.test\.cjs[^\n]*\n\s+if \(\$LASTEXITCODE -ne 0\)[^\n]*\n\s+\$env:SORTER_HTML = '\.\/dist\/index\.html'\n\s+node --test \.\/tests\/result-workflow\.test\.cjs\n\s+if \(\$LASTEXITCODE -ne 0\) \{ throw "Results workflow regression failed\." \}\n\s+Remove-Item Env:SORTER_HTML/,`${name}: ${JSON.stringify(newline)}`);
+    }
+  }
+});
+
+// Native Chromium QA showed closed More children keep nonzero layout rects;
+// focus cleanup can follow the download click rather than the open=false write.
+for(const id of ['csvButton','jsonButton']) {
+  test(`actual ${id} restores closed-More ownership even while its hidden button retains layout rects`,()=>{
+    for(const retainInvalidFocus of [false,true]) {
+      const h=selectedBulkApp({retainInvalidFocus,retainClosedDetailsRects:true}),more=h.$('.export-more'),opener=h.$('#'+id);
+      more.open=true;opener.focus();opener.click();
+      assert.equal(more.open,false);assert.equal(opener.getClientRects().length,1);
+      h.finishNativeFocusUpdates();assertFocus(h,more.querySelector('summary'));
+      assert.equal(h.downloads.length,1);assert.equal(more.open,false);
+    }
+  });
+}
