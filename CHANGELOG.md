@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Hide only the informational footer at the existing smartphone layout query `(max-width:700px)`; preserve desktop visibility and functional controls. Keep the existing populated lower version span at the very end of Help, visible on mobile as before; preserve the header version and model/runtime behavior.
+
+
 ## 1.0.5 - 2026-10-10
 
 - Keep modal Help within short and narrow viewports with a fixed header and scrollable body, and prevent background page scrolling while it is open.
