@@ -20,3 +20,13 @@ test('invalid developer review import preserves every existing decision',async()
  vm.runInContext(fn('importAccuracyReviewFile'),c);await c.importAccuracyReviewFile({text:async()=>JSON.stringify({schemaVersion:1,decisions:[{fileKey:'new',reviewed:true},null]})});
  assert.deepEqual(decisions,{existing:{reviewed:true}});
 });
+test('benchmark controls use the full collection and release busy after model failure',async()=>{
+ const buttons=[{},{},{}],rows=[],node=()=>({hidden:false,textContent:'',prepend:x=>rows.push(x)}),nodes=new Map(),$=k=>{if(!nodes.has(k))nodes.set(k,node());return nodes.get(k)};
+ const c=vm.createContext({benchmarkBusy:false,accuracyBusy:false,accuracyFiles:[{}],benchmarkCancelRequested:false,$,$$:()=>buttons,document:{createElement:()=>node()},BrowserKittyUI:{setButtonState:(button,state)=>button.state=state},performance:{now:()=>0},memoryMB:()=>null,loadModels:async()=>{throw Error('controlled model failure')},console:{error(){}},tr:k=>k,toast(){}});
+ vm.runInContext(fn('runBenchmark'),c);await c.runBenchmark(1);assert.equal(c.benchmarkBusy,false);assert.equal($('#benchmarkCancelButton').hidden,true);assert.ok(buttons.every(button=>button.state==='ready'));assert.equal(rows[0].textContent,'benchmarkFailed');
+});
+test('ZIP read failure keeps a keyed persistent recovery state without raw transient copy',async()=>{
+ const node=()=>({hidden:false,textContent:'',querySelector:()=>({textContent:'Save ZIP'})}),nodes=new Map(),$=k=>{if(!nodes.has(k))nodes.set(k,node());return nodes.get(k)};const messages=[];let rendered=0,handoffs=0;
+ const image={scores:[{}],file:{name:'photo.jpg',size:10,arrayBuffer:async()=>{throw Error('read failed')}}},c=vm.createContext({zipBusy:false,classificationDirty:false,outputFailed:false,images:[image],outputName:()=> 'edited.zip',categoryLabel:()=> 'Food',effectiveCategory:()=> 'food',$,BrowserKittyUI:{setButtonState(){}},tr:k=>k,toast:message=>messages.push(message),console:{error(){}},reserveUniqueZipPath:()=> 'Food/photo.jpg',TextEncoder,Uint8Array,DataView,Set,downloadBlob(){handoffs++},renderOutputStatus(){rendered++}});
+ vm.runInContext(fn('saveZip'),c);await c.saveZip();assert.equal(c.outputFailed,true);assert.equal(rendered,1);assert.equal(c.zipBusy,false);assert.equal(handoffs,0);assert.deepEqual(messages,[]);assert.equal(c.images[0],image);
+});

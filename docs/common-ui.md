@@ -8,6 +8,8 @@ Delete saved data confirms metadata-only scope, leaves current images and langua
 
 Classification and ZIP expose busy/stopping states and reject duplicate requests. Generation checks after awaited analysis prevent stale results from committing across Clear/restore. ZIP captures category folders and edited filename before awaiting bytes. Dirty classification results cannot be exported as current ZIP. Filters/search/selection do not change whole-batch output scope.
 
+The benchmark updates the full control collection and releases its busy state even after model failure. ZIP read/build failures use the same persistent translated output recovery as handoff failure and preserve the batch; raw exception toasts no longer substitute for recovery.
+
 Language is resolved URL/shared/legacy/browser/en without startup preference writes. Explicit switches persist only the common key and preserve input, search, selection and work. Blocked preference writes show screen-only notice; persistent output failure remains translated with retry guidance. The editable filename base applies to all existing output extensions.
 
 `scripts/check-common-ui.ps1` parses PowerShell, rebuilds, checks source/all generated runtime regressions, icon/help/visual assets, model/hash/CSP and release parity. No browser, native inference, actual download delivery or layout/device acceptance is claimed. Category/filter selection chips retain their selection appearance; action controls opt into shared colors/targets.
