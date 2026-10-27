@@ -100,6 +100,8 @@ $categoryDefs = Get-Content -Raw -Encoding UTF8 $defsPath
 $regressionConfig = Get-Content -Raw -Encoding UTF8 $regressionConfigPath
 $template = Get-Content -Raw -Encoding UTF8 (Join-Path $root 'src\index.template.html')
 
+. (Join-Path $root 'scripts/embed-ui-conventions.ps1')
+$template = Expand-BrowserKittyUI -Template $template -ComponentsPath (Join-Path $root 'components')
 $bundle = [ordered]@{ schemaVersion=1; dependencies=[ordered]@{
   runtime=[ordered]@{assets=[ordered]@{
     transformers=(Encode-Asset (Join-Path $root 'vendor\transformers\transformers.min.js') 'text/javascript' 'auto')
@@ -148,6 +150,9 @@ if ($remainingPlaceholders.Count -gt 0) {
 }
 
 [IO.File]::WriteAllText($OutputPath,$html,[Text.UTF8Encoding]::new($false))
+if ([IO.Path]::GetFullPath($OutputPath) -eq [IO.Path]::GetFullPath((Join-Path $root 'dist/index.html')) -or [IO.Path]::GetFullPath($OutputPath) -eq [IO.Path]::GetFullPath((Join-Path $root 'index.html'))) {
+  [IO.File]::WriteAllText((Join-Path $root 'smart-image-sorter.html'),$html,[Text.UTF8Encoding]::new($false))
+}
 
 $metrics = [ordered]@{
   model = 'tinyclip-vision-int8'

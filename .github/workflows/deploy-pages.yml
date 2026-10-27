@@ -73,6 +73,10 @@ jobs:
           node --test ./tests/result-workflow.test.cjs
           if ($LASTEXITCODE -ne 0) { throw "Results workflow regression failed." }
           Remove-Item Env:SORTER_HTML
+          $env:SORTER_HTML = './dist/index.html'
+          node --test ./tests/common-ui.test.cjs
+          if ($LASTEXITCODE -ne 0) { throw "Common UI state regressions failed." }
+          Remove-Item Env:SORTER_HTML
           New-Item -ItemType File -Force -Path ./dist/.nojekyll | Out-Null
           Write-Host "Standalone size: $([math]::Round((Get-Item ./dist/index.html).Length / 1MB, 1)) MB"
 

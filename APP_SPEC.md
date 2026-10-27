@@ -1,5 +1,7 @@
 # Smart Image Sorter - App Spec
 
+Shared UI 1.0.0: truthful metadata autosave/retry, explicit project/report/artifact save scope with editable filename, common language preference, cancel-first deletion/restore and duplicate/stale processing guards. See `docs/common-ui.md`; file schemas, original image bytes, model and dependency pins remain unchanged.
+
 ## Release
 
 - Version: **1.0.5**

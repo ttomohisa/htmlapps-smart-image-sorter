@@ -26,7 +26,7 @@ function element(tag = 'div') {
   return {tagName:tag.toUpperCase(),children:[],dataset:{},style:{},value:'',hidden:false,disabled:false,textContent:'',attributes:{},
     classList:{add:(...xs)=>xs.forEach(x=>classes.add(x)),remove:(...xs)=>xs.forEach(x=>classes.delete(x)),contains:x=>classes.has(x),toggle:(x,flag)=>flag?classes.add(x):classes.delete(x)},
     append(...xs){this.children.push(...xs)},replaceChildren(...xs){this.children=[...xs]},
-    setAttribute(key,value){this.attributes[key]=String(value)},getAttribute(key){return this.attributes[key]},
+    removeAttribute(key){delete this.attributes[key]},removeAttribute(key){delete this.attributes[key]},setAttribute(key,value){this.attributes[key]=String(value)},getAttribute(key){return this.attributes[key]},
     get options(){return this.children},querySelector(){return null},scrollIntoView:noop,
     focus(){this.focused=true},addEventListener:noop};
 }
@@ -44,15 +44,17 @@ function harness(extra = {}, names = []) {
     $,$$:()=>[],document:{createElement:element},CSS:{escape:x=>x},requestAnimationFrame:fn=>fn(),setTimeout:fn=>fn(),clearTimeout:noop,
     images:[],categories:[{id:'food',label:'Food'},{id:'scenery',label:'Scenery'}],filter:'all',resultSearchQuery:'',visibleLimit:60,lastReviewJumpId:null,resultViewGeneration:0,
     selectedImageIds:new Set(),mobileExpandedImageIds:new Set(),classificationDirty:false,classificationGeneration:0,textEmbeddingCache:null,textEmbeddingCacheKey:'',
-    workSessionPending:null,workSessionRestoredIds:new Set(),workSessionRestoredRecordIndexes:new Set(),workSessionAmbiguousCount:0,workSessionAutosaveSuppressed:false,
+    workSessionSaveTimer:0,workSessionSaveState:'dirty',workSessionSavedTime:'',workSessionDeletionError:false,classificationBusy:false,classificationCancelRequested:false,zipBusy:false,workImportGeneration:0,workSessionSaveTimer:0,workSessionSaveState:'dirty',workSessionSavedTime:'',workSessionDeletionError:false,classificationBusy:false,classificationCancelRequested:false,zipBusy:false,workImportGeneration:0,workSessionPending:null,workSessionRestoredIds:new Set(),workSessionRestoredRecordIndexes:new Set(),workSessionAmbiguousCount:0,workSessionAutosaveSuppressed:false,
     WORK_SESSION_SCHEMA_VERSION:1,APP_CONFIG:{version:'1.0.0'},URL:{createObjectURL:()=>`blob:${Math.random()}`,revokeObjectURL:noop},
     findCategoryDef:k=>categoryDefs.find(c=>c.key===k)||null,categoryLabel:k=>k,catalogLabel:c=>c.en,currentModelLabel:()=> 'TinyCLIP ViT-8M/16 · vision-only INT8',activeCategoryDefs:()=>categoryDefs.filter(c=>['food','scenery'].includes(c.key)),
     renderImagePreview:noop,renderResults:noop,updateClassifyButton:noop,scheduleWorkSessionSave:noop,updateWorkSessionUi:noop,updateWorkflowUi:noop,
-    updateResultEmptyState:noop,renderResultState:noop,updateBulkSelect:noop,updateReclassifyNote:noop,applyWorkSessionSettings:noop,deleteLocalWorkSession:noop,
+    updateResultEmptyState:noop,renderResultState:noop,updateBulkSelect:noop,updateReclassifyNote:noop,applyWorkSessionSettings:noop,deleteLocalWorkSession:async()=>true,
     confirmBox:async()=>true,toast:m=>messages.push(m),tr:(key,values={})=>key+JSON.stringify(values),
     renderImageCard:x=>({id:x.id}),renderFailedCard:x=>({id:x.id}),processingErrorText:x=>x.processingError,
     ...extra});
-  const helpers = ['workFilePath','workFileRelativePath','workFileKey','workFileLooseKey','workRecordFile','isValidWorkSession','restoreScoreList','restoreMatchingWorkRecords','addFiles','effectiveCategory','assignedCategory','matchesResultSearch','matchesResultView','resultViewItems','resetResultSearch','setResultSearch','clearResultSearch'];
+  const helpers = ['outputName','workFilePath','workFileRelativePath','workFileKey','workFileLooseKey','workRecordFile','isValidWorkSession','restoreScoreList','restoreMatchingWorkRecords','addFiles','effectiveCategory','assignedCategory','matchesResultSearch','matchesResultView','resultViewItems','resetResultSearch','setResultSearch','clearResultSearch'];
+  vm.runInContext(fs.readFileSync(path.join(root,'components/ui-conventions.js'),'utf8'),context);
+  vm.runInContext(fs.readFileSync(path.join(root,'components/ui-conventions.js'),'utf8'),context);
   vm.runInContext(`const accepted=/\\.(jpe?g|png|webp|avif)$/i;\n${[...new Set([...helpers,...names])].map(sourceFunction).join('\n')}`,context);
   return {ctx:context,$,messages,elements};
 }
@@ -280,6 +282,8 @@ function bootApp({retainInvalidFocus=false,retainClosedDetailsRects=false}={}) {
   script=script.replace(/const assetBundle=[^\n]+;/,'const assetBundle={};');
   const close=script.lastIndexOf('})();');assert.ok(close>0);
   script=script.slice(0,close)+`globalThis.testApi={setImages(value){images=value},getQuery(){return resultSearchQuery},getFilter(){return filter},getImages(){return images},renderResults,beginWorkSessionRestore,makeWorkSession};`+script.slice(close);
+  vm.runInContext(fs.readFileSync(path.join(root,'components/ui-conventions.js'),'utf8'),context);
+  vm.runInContext(fs.readFileSync(path.join(root,'components/ui-conventions.js'),'utf8'),context);
   vm.runInContext(script,context);return{ctx:context,api:context.testApi,$,document,downloads,finishNativeFocusUpdates(){for(const update of nativeFocusUpdates.splice(0))update()},requestedAssets:()=>requestedAssets};
 }
 test('full app event wiring preserves typed search through EN/JA switching and Clear',()=>{

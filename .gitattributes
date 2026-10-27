@@ -3,3 +3,5 @@
 
 # Large WASM files, if committed in the future, remain LFS candidates.
 *.wasm filter=lfs diff=lfs merge=lfs -text
+components/ui-conventions.js text eol=lf
+components/ui-conventions.css text eol=lf
