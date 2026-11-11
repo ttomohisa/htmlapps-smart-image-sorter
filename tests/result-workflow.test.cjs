@@ -44,7 +44,7 @@ function harness(extra = {}, names = []) {
     $,$$:()=>[],document:{createElement:element},CSS:{escape:x=>x},requestAnimationFrame:fn=>fn(),setTimeout:fn=>fn(),clearTimeout:noop,
     images:[],categories:[{id:'food',label:'Food'},{id:'scenery',label:'Scenery'}],filter:'all',resultSearchQuery:'',visibleLimit:60,lastReviewJumpId:null,resultViewGeneration:0,
     selectedImageIds:new Set(),mobileExpandedImageIds:new Set(),classificationDirty:false,classificationGeneration:0,classificationRunning:false,classificationCancelRequested:false,zipBuilding:false,textEmbeddingCache:null,textEmbeddingCacheKey:'',
-    workSessionPending:null,workSessionRestoredIds:new Set(),workSessionRestoredRecordIndexes:new Set(),workSessionAmbiguousCount:0,workSessionAutosaveSuppressed:false,workSessionSaveFailed:false,workSessionSaveTimer:null,
+    workSessionPending:null,workSessionRestoredIds:new Set(),workSessionRestoredRecordIndexes:new Set(),workSessionAmbiguousCount:0,workSessionAutosaveSuppressed:false,workSessionSaveFailed:false,workSessionSaveTimer:null,workSessionKnownRaw:null,workSessionAutosaveOwned:false,workSessionSaveConflict:false,WORK_SESSION_MAX_RECORDS:5000,WORK_SESSION_STORAGE_KEY:'session',WORK_SESSION_BACKUP_KEY:'backup',localStorage:{getItem:()=>null,setItem:noop,removeItem:noop},
     WORK_SESSION_SCHEMA_VERSION:1,APP_CONFIG:{version:'1.0.0'},URL:{createObjectURL:()=>`blob:${Math.random()}`,revokeObjectURL:noop},
     FIXED_CATEGORY_CATALOG:categoryDefs,findCategoryDef:k=>categoryDefs.find(c=>c.key===k)||null,reviewStateForRanking:()=>({review:false,reason:''}),categoryLabel:k=>k,catalogLabel:c=>c.en,currentModelLabel:()=> 'TinyCLIP ViT-8M/16 · vision-only INT8',activeCategoryDefs:()=>categoryDefs.filter(c=>['food','scenery'].includes(c.key)),
     renderImagePreview:noop,renderResults:noop,updateClassifyButton:noop,scheduleWorkSessionSave:noop,updateWorkSessionUi:noop,updateWorkflowUi:noop,
@@ -52,7 +52,7 @@ function harness(extra = {}, names = []) {
     confirmBox:async()=>true,toast:m=>messages.push(m),tr:(key,values={})=>key+JSON.stringify(values),
     renderImageCard:x=>({id:x.id}),renderFailedCard:x=>({id:x.id}),processingErrorText:x=>x.processingError,
     ...extra});
-  const helpers = ['workFilePath','workFileRelativePath','workFileKey','workFileLooseKey','workRecordFile','categoryKeysMatch','isValidWorkSession','restoreScoreList','restoreMatchingWorkRecords','addFiles','effectiveCategory','assignedCategory','matchesResultSearch','matchesResultView','resultViewItems','resetResultSearch','setResultSearch','clearResultSearch'];
+  const helpers = ['workFilePath','workFileRelativePath','workFileKey','workFileLooseKey','workRecordFile','categoryKeysMatch','isValidWorkSession','restoreScoreList','markWorkSessionConflict','workSessionStorageIsCurrent','clearWorkSessionTracking','restoreMatchingWorkRecords','addFiles','effectiveCategory','assignedCategory','matchesResultSearch','matchesResultView','resultViewItems','resetResultSearch','setResultSearch','clearResultSearch'];
   vm.runInContext(`const accepted=/\\.(jpe?g|png|webp|avif)$/i;\n${[...new Set([...helpers,...names])].map(sourceFunction).join('\n')}`,context);
   return {ctx:context,$,messages,elements};
 }
@@ -635,8 +635,8 @@ test('autosave quota failure reports an error and later success clears it',()=>{
 
 test('deleting all work data removes both autosave and the recovery backup after confirmation',async()=>{
   const stored=new Map([['main','current'],['backup','old']]);let allow=false;
-  const h=harness({images:[],WORK_SESSION_STORAGE_KEY:'main',WORK_SESSION_BACKUP_KEY:'backup',
-    localStorage:{getItem:k=>stored.get(k),removeItem:k=>stored.delete(k)},confirmBox:async()=>allow,
+  const h=harness({images:[],WORK_SESSION_STORAGE_KEY:'main',WORK_SESSION_BACKUP_KEY:'backup',workSessionKnownRaw:'current',
+    localStorage:{getItem:k=>stored.get(k)??null,removeItem:k=>stored.delete(k)},confirmBox:async()=>allow,
     updateWorkSessionUi:()=>{}},['deleteLocalWorkSession','deleteAllWorkSessions']);
   await h.ctx.deleteAllWorkSessions();
   assert.equal(stored.size,2);
@@ -724,4 +724,137 @@ test('pagehide does not revoke image object URLs when the document enters bfcach
   const pagehide=handlers.find(h=>h.name==='pagehide').fn;
   pagehide({persisted:true});assert.deepEqual(revoked,[]);
   pagehide({persisted:false});assert.deepEqual(revoked,['blob:photo']);
+});
+
+
+test('a new batch saves a recoverable copy of an existing session before overwriting autosave',()=>{
+  const previous={schemaVersion:1,categoryKeys:['food','scenery'],records:[legacyRecord(file({name:'previous.png'}))]};
+  const oldRaw=JSON.stringify(previous),stored=new Map([['main',oldRaw]]);
+  const h=harness({images:[entry(file({name:'fresh.png'}))],workSessionKnownRaw:oldRaw,
+    WORK_SESSION_STORAGE_KEY:'main',WORK_SESSION_BACKUP_KEY:'backup',
+    localStorage:{getItem:k=>stored.get(k)??null,setItem:(k,v)=>stored.set(k,v)}},
+    ['scoreForSession','makeWorkSession','writeLocalWorkSession']);
+  h.ctx.writeLocalWorkSession();
+  assert.equal(stored.get('backup'),oldRaw);
+  assert.equal(JSON.parse(stored.get('main')).records[0].name,'fresh.png');
+  assert.equal(h.ctx.workSessionAutosaveOwned,true);
+  h.ctx.images[0].manualCategoryId='food';
+  h.ctx.writeLocalWorkSession();
+  assert.equal(stored.get('backup'),oldRaw);
+});
+
+test('failure to back up a previous session prevents destructive overwrite',()=>{
+  const previous={schemaVersion:1,categoryKeys:['food','scenery'],records:[legacyRecord(a)]};
+  const oldRaw=JSON.stringify(previous),stored=new Map([['main',oldRaw]]);
+  const h=harness({images:[entry(file({name:'fresh.png'}))],workSessionKnownRaw:oldRaw,
+    WORK_SESSION_STORAGE_KEY:'main',WORK_SESSION_BACKUP_KEY:'backup',
+    localStorage:{getItem:k=>stored.get(k)??null,setItem:(k,v)=>{if(k==='backup')throw Error('quota');stored.set(k,v)}}},
+    ['scoreForSession','makeWorkSession','writeLocalWorkSession']);
+  h.ctx.writeLocalWorkSession();
+  assert.equal(stored.get('main'),oldRaw);
+  assert.equal(h.ctx.workSessionSaveFailed,true);
+  assert.ok(h.messages.some(x=>x.startsWith('workSessionSaveFailed')));
+});
+
+test('stale tab cannot overwrite a different tab saved work',()=>{
+  const original={schemaVersion:1,categoryKeys:['food','scenery'],records:[legacyRecord(a)]};
+  const newer={schemaVersion:1,categoryKeys:['food','scenery'],records:[legacyRecord(b)]};
+  const oldRaw=JSON.stringify(original),newRaw=JSON.stringify(newer),stored=new Map([['main',newRaw]]);
+  const h=harness({images:[entry(file({name:'fresh.png'}))],workSessionKnownRaw:oldRaw,
+    WORK_SESSION_STORAGE_KEY:'main',WORK_SESSION_BACKUP_KEY:'backup',
+    localStorage:{getItem:k=>stored.get(k)??null,setItem:(k,v)=>stored.set(k,v)}},
+    ['scoreForSession','makeWorkSession','writeLocalWorkSession']);
+  h.ctx.writeLocalWorkSession();
+  assert.equal(stored.get('main'),newRaw);
+  assert.equal(stored.has('backup'),false);
+  assert.equal(h.ctx.workSessionSaveConflict,true);
+  assert.ok(h.messages.some(x=>x.startsWith('workSessionConflict')));
+  assert.match(html,/addEventListener\('storage',event=>/);
+});
+
+test('a partially restored 1000-record session plus new intake stays valid on reload',()=>{
+  const pending=Array.from({length:1000},(_,i)=>legacyRecord(file({name:'saved-'+i+'.png',size:i+1})));
+  const h=harness({images:[entry(a)],workSessionPending:{schemaVersion:1,categoryKeys:['food','scenery'],records:pending}},
+    ['scoreForSession','makeWorkSession']);
+  const session=h.ctx.makeWorkSession();
+  assert.equal(session.records.length,1001);
+  assert.equal(h.ctx.isValidWorkSession(session),true);
+});
+
+test('a too-large autosave is rejected before persisting an un-restorable session',()=>{
+  const pending=Array.from({length:5000},(_,i)=>legacyRecord(file({name:'saved-'+i+'.png',size:i+1})));
+  const stored=new Map([['main','previous']]);
+  const h=harness({images:[entry(a)],workSessionPending:{schemaVersion:1,categoryKeys:['food','scenery'],records:pending},
+    workSessionKnownRaw:'previous',workSessionAutosaveOwned:true,WORK_SESSION_STORAGE_KEY:'main',
+    localStorage:{getItem:k=>stored.get(k)??null,setItem:(k,v)=>stored.set(k,v)}},
+    ['scoreForSession','makeWorkSession','writeLocalWorkSession']);
+  h.ctx.writeLocalWorkSession();
+  assert.equal(stored.get('main'),'previous');
+  assert.equal(h.ctx.workSessionSaveFailed,true);
+  assert.ok(h.messages.some(x=>x.startsWith('workSessionSaveFailed')));
+});
+
+test('CSV export treats formula-looking filenames and error text as data',()=>{
+  const h=harness({},['csvEscape']);
+  for(const x of ['=HYPERLINK("https://example.com","x").png','+SUM(1,1).png','-1+1.png','@CMD.png','\t=2+2.png','  =2+2.png']){
+    const escaped=h.ctx.csvEscape(x);
+    assert.ok(escaped.startsWith("'")||escaped.startsWith('"\''),escaped);
+  }
+  assert.equal(h.ctx.csvEscape('normal.png'),'normal.png');
+  assert.equal(h.ctx.csvEscape('photo,one.png'),'"photo,one.png"');
+  assert.equal(h.ctx.csvEscape('a"b.png'),'"a""b.png"');
+});
+
+test('failed session deletion does not claim success and preserves recovery tracking',()=>{
+  const h=harness({workSessionKnownRaw:'original',WORK_SESSION_STORAGE_KEY:'main',
+    localStorage:{getItem:()=> 'original',removeItem:()=>{throw Error('denied')}},
+    workSessionPending:{records:[]}},['deleteLocalWorkSession']);
+  assert.equal(h.ctx.deleteLocalWorkSession(),false);
+  assert.equal(h.ctx.workSessionKnownRaw,'original');
+  assert.ok(!h.messages.some(x=>x.startsWith('workSessionDeleted')));
+  assert.ok(h.messages.some(x=>x.startsWith('workSessionDeleteFailed')));
+});
+
+test('model load retry revokes newly allocated WASM and MJS object URLs after failure',async()=>{
+  let next=0;
+  const active=new Set(),freed=[];
+  const hf={env:{backends:{onnx:{wasm:{}}}},AutoProcessor:{from_pretrained:async()=>({})},CLIPVisionModelWithProjection:{from_pretrained:async()=>{throw Error('Temporary ONNX init failure')}},RawImage:{}};
+  const ctx=vm.createContext({modelRuntime:null,modelPromise:null,runtimeMode:'none',modelLoadMs:0,
+    StandaloneAssets:{has:()=>true,importModule:async()=>hf,blobUrl:async()=>{const url='blob:model-'+(++next);active.add(url);return url},
+      revokeBlobUrl:url=>{active.delete(url);freed.push(url)},release:noop},
+    BUILD_MANIFEST:{runtimeMode:'vision-split',dtype:'q8'},tr:x=>x,updateRuntime:noop,installEmbeddedFetch:async()=>{},performance:{now:()=>0},
+    $:()=>({}),currentModelLabel:()=>'',console});
+  vm.runInContext(sourceFunction('loadModels'),ctx);
+  for(let i=0;i<3;i++)await assert.rejects(ctx.loadModels(),/Temporary ONNX init failure/);
+  assert.equal(next,6);
+  assert.deepEqual(Array.from(active),[]);
+  assert.equal(freed.length,6);
+});
+
+test('accuracy dataset cannot switch during an asynchronous run and updates can resume after it finishes',async()=>{
+  const oldFile=file({name:'old.png'}),newFile=file({name:'new.png'}),messages=[];
+  const elements=new Map(),$=key=>{if(!elements.has(key))elements.set(key,{disabled:false,hidden:true,style:{},textContent:'',replaceChildren:noop});return elements.get(key)};
+  let startInference,finishInference,report=null;
+  const started=new Promise(r=>startInference=r),inference=new Promise(r=>finishInference=r);
+  const ctx=vm.createContext({$,$$:()=>[],accuracyFiles:[oldFile],accuracyRunning:false,benchmarkRunning:false,
+    accuracyCancelRequested:false,accuracyLastReport:null,accuracyReportStale:false,accuracyPredictionCache:new Map(),
+    accepted:/\.png$/i,accuracyDatasetInfo:()=>({valid:1,total:1,complete:true}),loadModels:async()=>({}),accuracyTextBundle:async()=>({}),
+    computeImageEmbedding:async()=>{startInference();await inference;return[1,0]},
+    accuracyReviewKey:f=>f.name,accuracyOriginalExpectedForFile:()=> 'food',accuracyExpectedForFile:()=> 'food',accuracyFilePath:f=>f.name,
+    accuracyDecisionForFile:()=>null,accuracyRanking:()=>[{key:'food',score:.9}],accuracyReviewState:()=>({review:false,reason:''}),
+    buildAccuracyReport:rows=>({rows}),renderAccuracyReport:r=>{report=r},updateAccuracyDatasetSummary:noop,renderAccuracyReview:noop,
+    toast:m=>messages.push(m),tr:x=>x,performance:{now:()=>0},URL:{createObjectURL:f=>'blob:'+f.name,revokeObjectURL:noop},console});
+  $('#accuracyReviewPanel').hidden=true;
+  vm.runInContext([sourceFunction('setAccuracyInputsBusy'),sourceFunction('setAccuracyFiles'),sourceFunction('runAccuracyTest')].join('\n'),ctx);
+  const running=ctx.runAccuracyTest();await started;
+  ctx.setAccuracyFiles([newFile]);
+  assert.equal(ctx.accuracyFiles[0].name,'old.png');
+  assert.equal($('#accuracyChooseButton').disabled,true);
+  assert.ok(messages.includes('accuracyBusy'));
+  finishInference();await running;
+  assert.equal(report.rows[0].file,'old.png');
+  assert.equal(ctx.accuracyRunning,false);
+  assert.equal($('#accuracyChooseButton').disabled,false);
+  ctx.setAccuracyFiles([newFile]);
+  assert.equal(ctx.accuracyFiles[0].name,'new.png');
 });

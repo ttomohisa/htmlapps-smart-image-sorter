@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Preserve previous autosave before starting an unrelated batch; detect cross-tab changes and stop stale overwrites without silently losing work.
+- Apply a consistent bounded work JSON record limit so autosave does not generate an unrecoverable session; flag failed deletion instead of reporting success.
+- Escape spreadsheet formula prefixes in CSV cells.
+- Release temporary WASM and MJS Blob URLs after failed model initialization to avoid accumulating memory on retries.
+- Lock developer accuracy test inputs/reviews during active inference or benchmarking and recheck cancellation after asynchronous inference.
+- Add regression tests for cross-tab conflicts, recovery backups, CSV fields, storage failures, model retries, and accuracy-test races.
+
 - Preserve image Blob URLs across bfcache navigation so Back/Forward can resume image previews and analysis.
 - Keep embedded runtime/model assets retryable until successful initialization and evict rejected decode caches.
 - Validate imported sessions before replacing current work; align restored categories and review flags with current settings, including partial restore autosaves.
