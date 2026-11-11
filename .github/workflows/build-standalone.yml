@@ -36,6 +36,19 @@ jobs:
         with:
           lfs: false
 
+      - name: Smoke-test GitHub Release gate for existing and absent tags
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $path = Join-Path $env:RUNNER_TEMP 'release-gate-existing.txt'
+          ./tools/check-release-gate.ps1 -Version '1.0.5' -Repository $env:GITHUB_REPOSITORY -OutputPath $path
+          if ((Get-Content -Raw $path).Trim() -ne 'publish=false') { throw 'Existing-release gate did not return publish=false' }
+
+          $path = Join-Path $env:RUNNER_TEMP 'release-gate-absent.txt'
+          ./tools/check-release-gate.ps1 -Version '0.0.0' -Repository $env:GITHUB_REPOSITORY -OutputPath $path
+          if ((Get-Content -Raw $path).Trim() -ne 'publish=true') { throw 'Absent-release gate did not return publish=true' }
+
       - name: Verify committed release assets
         shell: pwsh
         run: |
