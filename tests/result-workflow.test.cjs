@@ -44,7 +44,7 @@ function harness(extra = {}, names = []) {
     $,$$:()=>[],document:{createElement:element},CSS:{escape:x=>x},requestAnimationFrame:fn=>fn(),setTimeout:fn=>fn(),clearTimeout:noop,
     images:[],categories:[{id:'food',label:'Food'},{id:'scenery',label:'Scenery'}],filter:'all',resultSearchQuery:'',visibleLimit:60,lastReviewJumpId:null,resultViewGeneration:0,
     selectedImageIds:new Set(),mobileExpandedImageIds:new Set(),classificationDirty:false,classificationGeneration:0,classificationRunning:false,classificationCancelRequested:false,zipBuilding:false,textEmbeddingCache:null,textEmbeddingCacheKey:'',
-    workSessionPending:null,workSessionRestoredIds:new Set(),workSessionRestoredRecordIndexes:new Set(),workSessionAmbiguousCount:0,workSessionAutosaveSuppressed:false,workSessionSaveFailed:false,
+    workSessionPending:null,workSessionRestoredIds:new Set(),workSessionRestoredRecordIndexes:new Set(),workSessionAmbiguousCount:0,workSessionAutosaveSuppressed:false,workSessionSaveFailed:false,workSessionSaveTimer:null,
     WORK_SESSION_SCHEMA_VERSION:1,APP_CONFIG:{version:'1.0.0'},URL:{createObjectURL:()=>`blob:${Math.random()}`,revokeObjectURL:noop},
     FIXED_CATEGORY_CATALOG:categoryDefs,findCategoryDef:k=>categoryDefs.find(c=>c.key===k)||null,reviewStateForRanking:()=>({review:false,reason:''}),categoryLabel:k=>k,catalogLabel:c=>c.en,currentModelLabel:()=> 'TinyCLIP ViT-8M/16 · vision-only INT8',activeCategoryDefs:()=>categoryDefs.filter(c=>['food','scenery'].includes(c.key)),
     renderImagePreview:noop,renderResults:noop,updateClassifyButton:noop,scheduleWorkSessionSave:noop,updateWorkSessionUi:noop,updateWorkflowUi:noop,
@@ -694,4 +694,34 @@ test('embedded asset decoding retains retry source until successful runtime load
   assert.doesNotMatch(sourceFunction('inflate'),/asset\.base64=''/);
   const model=sourceFunction('loadModels');
   assert.ok(model.indexOf("StandaloneAssets.release('runtime','transformers')")>model.indexOf("modelRuntime={mode:'vision-split'"));
+});
+
+
+test('embedded asset decoding can be retried after a transient inflate failure',async()=>{
+  const first=html.indexOf('const blobUrls=new Set()'),last=html.indexOf('const FIXED_CATEGORY_DEFS=',first);
+  assert.ok(first>0&&last>first);
+  const bundle={dependencies:{runtime:{assets:{model:{base64:'SGk=',compression:'gzip',originalBytes:2}}}}};
+  const window={addEventListener:()=>{}};
+  const context=vm.createContext({assetBundle:bundle,window,atob:x=>Buffer.from(x,'base64').toString('binary'),Blob,Uint8Array,TextDecoder,
+    URL:{createObjectURL:()=>{},revokeObjectURL:noop},images:[],clearAccuracyReviewUrls:noop});
+  vm.runInContext(html.slice(first,last),context);
+  const assets=window.StandaloneAssets;
+  await assert.rejects(assets.bytes('runtime','model'),/cannot expand the embedded gzip assets/);
+  assert.equal(bundle.dependencies.runtime.assets.model.base64,'SGk=');
+  bundle.dependencies.runtime.assets.model.compression='none';
+  const recovered=await assets.bytes('runtime','model');
+  assert.deepEqual(Array.from(recovered),[72,105]);
+  assets.release('runtime','model');
+  assert.equal(bundle.dependencies.runtime.assets.model.base64,'');
+});
+
+test('pagehide does not revoke image object URLs when the document enters bfcache',()=>{
+  const first=html.indexOf('const blobUrls=new Set()'),last=html.indexOf('const FIXED_CATEGORY_DEFS=',first);
+  const handlers=[],revoked=[],window={addEventListener:(name,fn)=>handlers.push({name,fn})};
+  const context=vm.createContext({assetBundle:{dependencies:{}},window,atob:()=>'',Blob,Uint8Array,TextDecoder,
+    URL:{createObjectURL:()=>{},revokeObjectURL:url=>revoked.push(url)},images:[{url:'blob:photo'}],clearAccuracyReviewUrls:noop});
+  vm.runInContext(html.slice(first,last),context);
+  const pagehide=handlers.find(h=>h.name==='pagehide').fn;
+  pagehide({persisted:true});assert.deepEqual(revoked,[]);
+  pagehide({persisted:false});assert.deepEqual(revoked,['blob:photo']);
 });
