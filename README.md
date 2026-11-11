@@ -96,7 +96,9 @@ The matching count and 60-card pages follow the search. Previous/next review and
 
 The app stores category selection, strictness, compact classification results, review state, manual corrections, and file identity metadata in the browser. It does **not** save image bytes or image embeddings.
 
-To restore work, reselect the same files or folder. Matching uses relative path when available, plus filename, size, and last-modified time. Work JSON export/import is available as an explicit backup.
+To restore work, reselect the same files or folder. Matching uses relative path when available, plus filename, size, and last-modified time. Work JSON export/import is available as an explicit backup. Replacing an open work session asks for confirmation and saves the previous work in a local backup (Manage work data → Restore work before replacement). While some files are still waiting to be reselected, autosave and work JSON export preserve both current edits and unmatched restore records. Images are not backed up, so the original files must still be reselected.
+
+During sorting, adding/removing images, changing categories or review strictness, retrying failed images, and replacing saved work are temporarily unavailable. Cancel sorting first to change these inputs. ZIP export uses category assignments captured when ZIP creation begins, even if results or interface language subsequently change.
 
 Different known relative paths are kept as separate images even when filename, size, and timestamp match. Paths and filenames retain case; backslashes in supplied paths are normalized. Repeated selections of the same full identity are deduplicated. Selecting the same file individually and through a folder may produce separate entries because a pathless selection does not prove a folder identity.
 

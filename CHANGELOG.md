@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Prevent concurrent classification runs and stale last-image commits after cancellation; lock classification inputs until the run ends.
+- Confirm work-session replacement and preserve a local backup of the preceding work, with a restore action.
+- Autosave and export both edited results and unmatched records while a session is only partially restored.
+- Snapshot ZIP category destinations at the start of generation and ignore repeat save requests.
+- Add regression coverage for classification cancellation, session replacement, partial restore, and ZIP consistency.
+
 - Hide only the informational footer at the existing smartphone layout query `(max-width:700px)`; preserve desktop visibility and functional controls. Keep the existing populated lower version span at the very end of Help, visible on mobile as before; preserve the header version and model/runtime behavior.
 
 
