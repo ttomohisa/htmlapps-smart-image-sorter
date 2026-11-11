@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Preserve image Blob URLs across bfcache navigation so Back/Forward can resume image previews and analysis.
+- Keep embedded runtime/model assets retryable until successful initialization and evict rejected decode caches.
+- Validate imported sessions before replacing current work; align restored categories and review flags with current settings, including partial restore autosaves.
+- Surface autosave failures and allow erasing both autosave and recovery backup.
+- Preserve filenames/extensions and localized score labels in ZIP/CSV/JSON; stream CRC calculation over File blobs to avoid 750 MB full-buffer copies.
+- Keep download URLs valid longer for slower mobile downloads and add deep regression tests.
+
 - Prevent concurrent classification runs and stale last-image commits after cancellation; lock classification inputs until the run ends.
 - Confirm work-session replacement and preserve a local backup of the preceding work, with a restore action.
 - Autosave and export both edited results and unmatched records while a session is only partially restored.
