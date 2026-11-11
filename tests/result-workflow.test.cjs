@@ -535,16 +535,17 @@ test('ZIP freezes category destinations and ignores repeated save clicks',async(
 test('a decoder rejection after cancellation is not recorded as a failed image',async()=>{
   let rejectEmbedding;
   const waiting=new Promise((resolve,reject)=>{rejectEmbedding=reject});
+  let markStarted;const started=new Promise(resolve=>{markStarted=resolve});
   const img=entry(file(),'last');
   const h=harness({
     images:[img],DOMException,innerWidth:1200,
     loadModels:async()=>({}),getTextTermEmbeddings:async()=>({}),
-    getImageEmbedding:()=>waiting,
+    getImageEmbedding:()=>{markStarted();return waiting}, 
     activeCategoryEntries:()=>[{id:'food',label:'Food'},{id:'scenery',label:'Scenery'}],
     updateRuntime:noop,switchMobile:noop,
   },['setClassificationControlsBusy','assertClassificationActive','runClassification']);
   const processing=h.ctx.runClassification();
-  await Promise.resolve();await Promise.resolve();await Promise.resolve();
+  await started;
   h.ctx.classificationCancelRequested=true;
   rejectEmbedding(new Error('decode failed'));
   await processing;
