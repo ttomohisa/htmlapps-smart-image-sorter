@@ -1,0 +1,180 @@
+name: Publish versioned GitHub Release
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "app.config.json"
+      - "src/**"
+      - "tools/**"
+      - "data/**"
+      - "models/**"
+      - "CHANGELOG.md"
+      - "docs/releases/**"
+      - ".github/workflows/release.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: smart-image-sorter-github-release
+  cancel-in-progress: false
+
+jobs:
+  build:
+    if: github.ref == 'refs/heads/main'
+    runs-on: windows-latest
+    timeout-minutes: 35
+    outputs:
+      publish: ${{ steps.gate.outputs.publish }}
+    steps:
+      - name: Checkout exact main commit without write credentials
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Check requested version and existing release
+        id: gate
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $version = (Get-Content -Raw -Encoding UTF8 ./app.config.json | ConvertFrom-Json).version
+          if ($version -ne '1.0.6') {
+            Write-Host "This workflow only releases v1.0.6; actual version is $version. Skipping."
+            "publish=false" >> $env:GITHUB_OUTPUT
+            exit 0
+          }
+          gh release view "v$version" --repo $env:GITHUB_REPOSITORY --json tagName *> $null
+          if ($LASTEXITCODE -eq 0) {
+            Write-Host "Release v$version already exists. It will not be replaced."
+            "publish=false" >> $env:GITHUB_OUTPUT
+            exit 0
+          }
+          "publish=true" >> $env:GITHUB_OUTPUT
+
+      - name: Verify pinned model and label assets
+        if: steps.gate.outputs.publish == 'true'
+        shell: pwsh
+        run: |
+          $model = './models/TinyCLIP-ViT-8M-16-Text-3M-YFCC15M-ONNX/onnx/vision_model_quantized.onnx'
+          $labels = './data/fixed-label-embeddings.tinyclip-int8.generated.json'
+          if (!(Test-Path $model) -or !(Test-Path $labels)) { throw 'Committed release assets are missing' }
+          $sha = (Get-FileHash $model -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($sha -ne 'bbf8426b0e548881dcfd9257030dd6139fceeeb4808994968b882ecc3ada291f') {
+            throw "Release model SHA-256 mismatch: $sha"
+          }
+
+      - name: Fetch pinned runtime assets
+        if: steps.gate.outputs.publish == 'true'
+        shell: pwsh
+        run: ./tools/setup-assets.ps1
+
+      - name: Build versioned standalone HTML
+        if: steps.gate.outputs.publish == 'true'
+        shell: pwsh
+        run: ./tools/build-standalone.ps1 -OutputPath ./dist/index.html
+
+      - name: Validate source, generated HTML and release metadata
+        if: steps.gate.outputs.publish == 'true'
+        shell: pwsh
+        run: |
+          $html = Get-Content -Raw -Encoding UTF8 ./dist/index.html
+          if ($html -notmatch 'v1\.0\.6') { throw 'Release version is missing' }
+          if ($html -notmatch 'connect-src blob:' -or $html -match 'connect-src[^;]*(https?:|\*)') {
+            throw 'Standalone CSP permits unexpected network access'
+          }
+          if ($html -notmatch "'wasm-unsafe-eval'") { throw 'WASM CSP permission missing' }
+          node --test ./tests/release-contract.test.cjs
+          if ($LASTEXITCODE -ne 0) { throw 'Release metadata regression failed' }
+          node --test ./tests/icon-brand.test.cjs
+          if ($LASTEXITCODE -ne 0) { throw 'Icon regression failed' }
+          node ./tests/visual-assets.test.mjs
+          if ($LASTEXITCODE -ne 0) { throw 'Visual asset regression failed' }
+          node ./tests/header-normalization.test.mjs src/index.template.html dist/index.html
+          if ($LASTEXITCODE -ne 0) { throw 'Header regression failed' }
+          node ./tests/help-dialog.test.cjs src/index.template.html dist/index.html
+          if ($LASTEXITCODE -ne 0) { throw 'Help regression failed' }
+          $env:SORTER_HTML = './dist/index.html'
+          node --test ./tests/result-workflow.test.cjs
+          if ($LASTEXITCODE -ne 0) { throw 'Workflow regression failed' }
+          Remove-Item Env:SORTER_HTML
+
+      - name: Prepare verified release assets
+        if: steps.gate.outputs.publish == 'true'
+        shell: pwsh
+        run: ./tools/package-release.ps1
+
+      - name: Upload immutable release bundle
+        if: steps.gate.outputs.publish == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: smart-image-sorter-release-v1.0.6
+          path: dist/release/
+          if-no-files-found: error
+          retention-days: 14
+
+  publish:
+    needs: build
+    if: needs.build.outputs.publish == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout release notes only (no untrusted code execution)
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Download exactly this run's verified release bundle
+        uses: actions/download-artifact@v8
+        with:
+          name: smart-image-sorter-release-v1.0.6
+          path: release-files
+
+      - name: Verify archive checksums and publish only from current main
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          cd release-files
+          sha256sum -c SHA256SUMS.txt
+          cd ..
+
+          main_sha="$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq '.object.sha')"
+          if [ "$main_sha" != "$GITHUB_SHA" ]; then
+            echo "::error::The main branch advanced since this release build. Refusing to tag an older commit."
+            exit 1
+          fi
+
+          tag="v1.0.6"
+          if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "Release $tag already exists; no changes made."
+            exit 0
+          fi
+
+          if tag_json="$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$tag" 2>/dev/null)"; then
+            tag_type="$(printf '%s' "$tag_json" | jq -r '.object.type')"
+            tag_sha="$(printf '%s' "$tag_json" | jq -r '.object.sha')"
+            if [ "$tag_type" = "tag" ]; then
+              tag_sha="$(gh api "repos/$GITHUB_REPOSITORY/git/tags/$tag_sha" --jq '.object.sha')"
+            fi
+            if [ "$tag_sha" != "$GITHUB_SHA" ]; then
+              echo "::error::Tag $tag exists at another commit. Refusing to overwrite it."
+              exit 1
+            fi
+          fi
+
+          gh release create "$tag" \
+            "release-files/htmlapps-smart-image-sorter-v1.0.6.html" \
+            "release-files/htmlapps-smart-image-sorter-v1.0.6.zip" \
+            "release-files/SHA256SUMS.txt" \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" \
+            --title "Smart Image Sorter v1.0.6" \
+            --notes-file docs/releases/v1.0.6.md \
+            --latest

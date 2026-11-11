@@ -96,11 +96,27 @@ The matching count and 60-card pages follow the search. Previous/next review and
 
 The app stores category selection, strictness, compact classification results, review state, manual corrections, and file identity metadata in the browser. It does **not** save image bytes or image embeddings.
 
-To restore work, reselect the same files or folder. Matching uses relative path when available, plus filename, size, and last-modified time. Work JSON export/import is available as an explicit backup.
+To restore work, reselect the same files or folder. Matching uses relative path when available, plus filename, size, and last-modified time. Work JSON export/import is available as an explicit backup. Replacing an open work session asks for confirmation and saves the previous work in a local backup (Manage work data → Restore work before replacement). While some files are still waiting to be reselected, autosave and work JSON export preserve both current edits and unmatched restore records. Images are not backed up, so the original files must still be reselected.
+
+During sorting, adding/removing images, changing categories or review strictness, retrying failed images, and replacing saved work are temporarily unavailable. Cancel sorting first to change these inputs. ZIP export uses category assignments captured when ZIP creation begins, even if results or interface language subsequently change.
+
+If you start a new batch without restoring a previous autosave, the previous work is backed up before the new batch is saved. Work opened in another tab is protected by a saved-content conflict check; if another tab changes it, autosave pauses and asks you to export a work JSON. This is best-effort protection against cross-tab overwrites, not a transactional lock. Failed deletion of saved work is reported rather than shown as completed. Work JSON generation and validation share the same record-count limit. CSV fields that begin with spreadsheet formula characters are prefixed to reduce formula-injection risk; spreadsheet behavior should still be checked when exporting externally sourced names.
+
+Corrupted or incompatible work JSON is rejected before replacing the open work. If categories change during a partial restore, unmatched records are kept without outdated automatic scores; re-sort them with the current categories. Needs Review is recalculated using the current strictness. Autosave failures are explicitly shown so you can export a work JSON manually. **Delete all saved work** clears both the autosave and its local recovery backup; **Delete current autosave** only clears the current saved session.
+
+ZIP export calculates checksums incrementally from original image file streams and builds the ZIP from original File/Blob references rather than retaining copied whole-file buffers. The 750 MB size limit still applies, and large exports can be slow or hit device memory limits. Filenames are sanitized while preserving extensions and complete Unicode code points; downloadable Blob URLs remain valid for 60 seconds after download is started.
 
 Different known relative paths are kept as separate images even when filename, size, and timestamp match. Paths and filenames retain case; backslashes in supplied paths are normalized. Repeated selections of the same full identity are deduplicated. Selecting the same file individually and through a folder may produce separate entries because a pathless selection does not prove a folder identity.
 
 Restore reads existing schema-v1 work JSON from raw file metadata, including legacy saved keys. Exact identities take priority. A missing-path fallback is allowed only for a unique, one-to-one metadata match, never across conflicting known paths. Ambiguous candidates stay unrestored with a prompt to reselect the original folder; each saved record restores at most one loaded image. No image bytes or hashes are read to establish identity.
+
+## Releases
+
+Version **v1.0.6** is prepared by PR #11. After merging into `main`, the **Publish versioned GitHub Release** workflow validates the app, rebuilds `dist/index.html` from the tracked source and bundled assets, and publishes a tag `v1.0.6` with three downloads: the standalone HTML, a ZIP containing that same HTML with licensing/docs/assets, and `SHA256SUMS.txt`. It does not release on PR branches and does not overwrite existing releases. The workflow can also be re-run manually on `main` if it fails.
+
+For a pre-merge download, use the GitHub Actions **Validate standalone HTML** run's `smart-image-sorter-release-candidate-...` artifact. The historical checked-in repository-root `smart-image-sorter.html` is **not** the release artifact. Always use the generated `dist/index.html` or the versioned GitHub Release HTML, which include the current source and embedded model.
+
+This workflow cannot establish cross-browser compatibility alone: manual checks with Safari, Firefox, actual smartphones, and large ZIP files remain relevant before wider distribution.
 
 ## Fixed categories and developer maintenance
 

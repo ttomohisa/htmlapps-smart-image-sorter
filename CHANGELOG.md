@@ -1,6 +1,26 @@
 # Changelog
 
-## Unreleased
+## 1.0.6 - 2026-11-11
+
+- Preserve previous autosave before starting an unrelated batch; detect cross-tab changes and stop stale overwrites without silently losing work.
+- Apply a consistent bounded work JSON record limit so autosave does not generate an unrecoverable session; flag failed deletion instead of reporting success.
+- Escape spreadsheet formula prefixes in CSV cells.
+- Release temporary WASM and MJS Blob URLs after failed model initialization to avoid accumulating memory on retries.
+- Lock developer accuracy test inputs/reviews during active inference or benchmarking and recheck cancellation after asynchronous inference.
+- Add regression tests for cross-tab conflicts, recovery backups, CSV fields, storage failures, model retries, and accuracy-test races.
+
+- Preserve image Blob URLs across bfcache navigation so Back/Forward can resume image previews and analysis.
+- Keep embedded runtime/model assets retryable until successful initialization and evict rejected decode caches.
+- Validate imported sessions before replacing current work; align restored categories and review flags with current settings, including partial restore autosaves.
+- Surface autosave failures and allow erasing both autosave and recovery backup.
+- Preserve filenames/extensions and localized score labels in ZIP/CSV/JSON; stream CRC calculation over File blobs to avoid 750 MB full-buffer copies.
+- Keep download URLs valid longer for slower mobile downloads and add deep regression tests.
+
+- Prevent concurrent classification runs and stale last-image commits after cancellation; lock classification inputs until the run ends.
+- Confirm work-session replacement and preserve a local backup of the preceding work, with a restore action.
+- Autosave and export both edited results and unmatched records while a session is only partially restored.
+- Snapshot ZIP category destinations at the start of generation and ignore repeat save requests.
+- Add regression coverage for classification cancellation, session replacement, partial restore, and ZIP consistency.
 
 - Hide only the informational footer at the existing smartphone layout query `(max-width:700px)`; preserve desktop visibility and functional controls. Keep the existing populated lower version span at the very end of Help, visible on mobile as before; preserve the header version and model/runtime behavior.
 
