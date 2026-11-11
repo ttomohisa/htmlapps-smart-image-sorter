@@ -30,6 +30,11 @@ test('release publishing runs only after a main update or manual dispatch',()=>{
   assert.match(yml,/version -ne '1\.0\.6'/);
   assert.match(yml,/needs\.build\.outputs\.publish == 'true'/);
   assert.match(yml,/contents: write/);
+  assert.match(yml,/Invoke-WebRequest/);
+  assert.match(yml,/-SkipHttpErrorCheck -StatusCodeVariable releaseStatus/);
+  assert.match(yml,/releaseStatus -eq 200/);
+  assert.match(yml,/releaseStatus -ne 404/);
+  assert.doesNotMatch(yml,/gh release view[^\n]*\*> \$null/);
   assert.match(yml,/gh release view/);
   assert.match(yml,/gh release create/);
   assert.match(yml,/--target "\$GITHUB_SHA"/);
