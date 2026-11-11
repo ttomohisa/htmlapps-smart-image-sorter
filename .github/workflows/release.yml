@@ -47,12 +47,22 @@ jobs:
             "publish=false" >> $env:GITHUB_OUTPUT
             exit 0
           }
-          gh release view "v$version" --repo $env:GITHUB_REPOSITORY --json tagName *> $null
-          if ($LASTEXITCODE -eq 0) {
+          # A missing release returns HTTP 404. Do not run a failing native command with
+          # ErrorActionPreference=Stop: PowerShell may terminate the gate before the status check.
+          $apiUrl = "https://api.github.com/repos/$env:GITHUB_REPOSITORY/releases/tags/v$version"
+          $headers = @{
+            Authorization = "Bearer $env:GH_TOKEN"
+            Accept = 'application/vnd.github+json'
+            'X-GitHub-Api-Version' = '2022-11-28'
+          }
+          $response = Invoke-WebRequest -Uri $apiUrl -Headers $headers -SkipHttpErrorCheck -StatusCodeVariable releaseStatus
+          if ($releaseStatus -eq 200) {
             Write-Host "Release v$version already exists. It will not be replaced."
             "publish=false" >> $env:GITHUB_OUTPUT
             exit 0
           }
+          if ($releaseStatus -ne 404) { throw "GitHub Release lookup failed with HTTP $releaseStatus" }
+          Write-Host "No existing release v$version (HTTP 404); preparing release."
           "publish=true" >> $env:GITHUB_OUTPUT
 
       - name: Verify pinned model and label assets
