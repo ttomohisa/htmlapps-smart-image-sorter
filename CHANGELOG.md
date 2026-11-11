@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.0.6 - 2026-11-11
 
 - Preserve previous autosave before starting an unrelated batch; detect cross-tab changes and stop stale overwrites without silently losing work.
 - Apply a consistent bounded work JSON record limit so autosave does not generate an unrecoverable session; flag failed deletion instead of reporting success.

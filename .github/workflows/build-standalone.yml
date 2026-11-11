@@ -8,6 +8,9 @@ on:
     paths:
       - "src/**"
       - "assets/screenshot*.png"
+      - "docs/releases/**"
+      - "tests/release-contract.test.cjs"
+      - ".github/workflows/release.yml"
       - "tests/visual-assets.test.mjs"
       - "tools/**"
       - "data/**"
@@ -68,7 +71,7 @@ jobs:
           )
           $remainingPlaceholders = @($buildPlaceholders | Where-Object { $html.Contains($_) })
           if ($remainingPlaceholders.Count -gt 0) { throw "unresolved build placeholder remains: $($remainingPlaceholders -join ', ')" }
-          if ($html -notmatch 'v1\.0\.5') { throw 'release version is missing from generated HTML' }
+          if ($html -notmatch 'v1\.0\.6') { throw 'release version is missing from generated HTML' }
           node --test ./tests/icon-brand.test.cjs
           if ($LASTEXITCODE -ne 0) { throw "Brand icon regression failed." }
           node ./tests/visual-assets.test.mjs
@@ -81,8 +84,22 @@ jobs:
           node --test ./tests/result-workflow.test.cjs
           if ($LASTEXITCODE -ne 0) { throw "Results workflow regression failed." }
           Remove-Item Env:SORTER_HTML
+          node --test ./tests/release-contract.test.cjs
+          if ($LASTEXITCODE -ne 0) { throw "Release contract regression failed." }
           New-Item -ItemType File -Force -Path ./dist/.nojekyll | Out-Null
           Write-Host "Standalone size: $([math]::Round((Get-Item ./dist/index.html).Length / 1MB, 1)) MB"
+
+      - name: Build and verify release candidate files
+        shell: pwsh
+        run: ./tools/package-release.ps1
+
+      - name: Upload release candidate files
+        uses: actions/upload-artifact@v7
+        with:
+          name: smart-image-sorter-release-candidate-${{ github.event.pull_request.head.sha || github.sha }}
+          path: dist/release/
+          if-no-files-found: error
+          retention-days: 14
 
       - name: Upload standalone artifact
         uses: actions/upload-artifact@v7

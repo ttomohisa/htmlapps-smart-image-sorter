@@ -110,6 +110,14 @@ Different known relative paths are kept as separate images even when filename, s
 
 Restore reads existing schema-v1 work JSON from raw file metadata, including legacy saved keys. Exact identities take priority. A missing-path fallback is allowed only for a unique, one-to-one metadata match, never across conflicting known paths. Ambiguous candidates stay unrestored with a prompt to reselect the original folder; each saved record restores at most one loaded image. No image bytes or hashes are read to establish identity.
 
+## Releases
+
+Version **v1.0.6** is prepared by PR #11. After merging into `main`, the **Publish versioned GitHub Release** workflow validates the app, rebuilds `dist/index.html` from the tracked source and bundled assets, and publishes a tag `v1.0.6` with three downloads: the standalone HTML, a ZIP containing that same HTML with licensing/docs/assets, and `SHA256SUMS.txt`. It does not release on PR branches and does not overwrite existing releases. The workflow can also be re-run manually on `main` if it fails.
+
+For a pre-merge download, use the GitHub Actions **Validate standalone HTML** run's `smart-image-sorter-release-candidate-...` artifact. The historical checked-in repository-root `smart-image-sorter.html` is **not** the release artifact. Always use the generated `dist/index.html` or the versioned GitHub Release HTML, which include the current source and embedded model.
+
+This workflow cannot establish cross-browser compatibility alone: manual checks with Safari, Firefox, actual smartphones, and large ZIP files remain relevant before wider distribution.
+
 ## Fixed categories and developer maintenance
 
 Normal users choose from the predefined catalog. The release UI does not accept arbitrary free-text categories.
