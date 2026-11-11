@@ -1015,7 +1015,7 @@ function renderAccuracyReport(report){
 }
 function setAccuracyInputsBusy(busy){
   for(const id of ['accuracyChooseFolderButton','accuracyChooseButton','accuracyInput','accuracyFolderInput','accuracyReviewImportButton','accuracyReviewResetAllButton','accuracyRunButton']){const el=$('#'+id);if(el)el.disabled=busy}
-  for(const el of $('[data-benchmark-count]'))el.disabled=busy;
+  for(const el of $$('[data-benchmark-count]'))el.disabled=busy;
 }
 function setAccuracyFiles(fileList){if(accuracyRunning||benchmarkRunning){toast(tr('accuracyBusy'),'danger');return}accuracyFiles=Array.from(fileList||[]).filter(f=>(f.type?.startsWith('image/')||accepted.test(f.name||'')));accuracyLastReport=null;accuracyReportStale=false;accuracyPredictionCache.clear();$('#accuracyRunButton').disabled=!accuracyFiles.length;$('#accuracyReviewToggleButton').disabled=!accuracyFiles.length;$('#accuracyExportActions').hidden=true;$('#accuracyResults').replaceChildren();updateAccuracyDatasetSummary();if(!$('#accuracyReviewPanel').hidden){accuracyReviewVisibleLimit=60;renderAccuracyReview()}}
 async function runAccuracyTest(){
