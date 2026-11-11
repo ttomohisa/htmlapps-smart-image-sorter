@@ -530,3 +530,26 @@ test('ZIP freezes category destinations and ignores repeated save clicks',async(
   assert.deepEqual(paths,['Food/one.png','Food/two.png']);
   assert.equal(h.$('#zipButton').disabled,false);
 });
+
+
+test('a decoder rejection after cancellation is not recorded as a failed image',async()=>{
+  let rejectEmbedding;
+  const waiting=new Promise((resolve,reject)=>{rejectEmbedding=reject});
+  const img=entry(file(),'last');
+  const h=harness({
+    images:[img],DOMException,innerWidth:1200,
+    loadModels:async()=>({}),getTextTermEmbeddings:async()=>({}),
+    getImageEmbedding:()=>waiting,
+    activeCategoryEntries:()=>[{id:'food',label:'Food'},{id:'scenery',label:'Scenery'}],
+    updateRuntime:noop,switchMobile:noop,
+  },['setClassificationControlsBusy','assertClassificationActive','runClassification']);
+  const processing=h.ctx.runClassification();
+  await Promise.resolve();await Promise.resolve();await Promise.resolve();
+  h.ctx.classificationCancelRequested=true;
+  rejectEmbedding(new Error('decode failed'));
+  await processing;
+  assert.equal(img.scores,null);
+  assert.equal(img.processingError,undefined);
+  assert.equal(h.ctx.classificationRunning,false);
+  assert.ok(h.messages.some(m=>m.startsWith('cancelled')));
+});

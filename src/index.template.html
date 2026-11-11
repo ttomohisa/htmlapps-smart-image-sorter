@@ -519,8 +519,8 @@ function sessionTimeLabel(iso){try{return new Intl.DateTimeFormat(language==='ja
 function updateWorkSessionUi(){
   const status=$('#workSessionStatus'),banner=$('#workSessionRestoreBanner');if(!status||!banner)return;
   const saved=readLocalWorkSession();
-  const restoreButton=$('#restoreWorkSessionButton'),restoreImages=$('#restoreChooseImagesButton'),restoreFolder=$('#restoreChooseFolderButton');if(saved){status.classList.add('is-saved');status.textContent=tr('workSessionSaved',{time:sessionTimeLabel(saved.savedAt)});banner.hidden=false;$('#workSessionRestoreTitle').textContent=tr('workSessionPrevious');$('#workSessionRestoreCopy').textContent=tr('workSessionPreviousCopy',{count:saved.records.length,time:sessionTimeLabel(saved.savedAt)});if(restoreButton)restoreButton.disabled=false;if(restoreImages)restoreImages.hidden=true;if(restoreFolder)restoreFolder.hidden=true}
-  else{status.classList.remove('is-saved');status.textContent=tr('workSessionNotSaved');banner.hidden=true;if(restoreButton)restoreButton.disabled=false;if(restoreImages)restoreImages.hidden=true;if(restoreFolder)restoreFolder.hidden=true}
+  const restoreButton=$('#restoreWorkSessionButton'),restoreImages=$('#restoreChooseImagesButton'),restoreFolder=$('#restoreChooseFolderButton');if(saved){status.classList.add('is-saved');status.textContent=tr('workSessionSaved',{time:sessionTimeLabel(saved.savedAt)});banner.hidden=false;$('#workSessionRestoreTitle').textContent=tr('workSessionPrevious');$('#workSessionRestoreCopy').textContent=tr('workSessionPreviousCopy',{count:saved.records.length,time:sessionTimeLabel(saved.savedAt)});if(restoreButton)restoreButton.disabled=classificationRunning;if(restoreImages)restoreImages.hidden=true;if(restoreFolder)restoreFolder.hidden=true}
+  else{status.classList.remove('is-saved');status.textContent=tr('workSessionNotSaved');banner.hidden=true;if(restoreButton)restoreButton.disabled=classificationRunning;if(restoreImages)restoreImages.hidden=true;if(restoreFolder)restoreFolder.hidden=true}
   const restoreBackup=$('#restoreBackupWorkSessionButton');if(restoreBackup)restoreBackup.hidden=!readWorkSessionBackup();
   if(workSessionPending){banner.hidden=false;status.classList.add('is-saved');status.textContent=tr('workSessionRestoreReady');$('#workSessionRestoreTitle').textContent=tr('workSessionRestoreReady');$('#workSessionRestoreCopy').textContent=workSessionAmbiguousCount?tr('workSessionAmbiguous',{count:workSessionAmbiguousCount}):tr('workSessionNote');if(restoreButton)restoreButton.disabled=true;if(restoreImages)restoreImages.hidden=false;if(restoreFolder)restoreFolder.hidden=false}
 }
@@ -530,7 +530,7 @@ function writeLocalWorkSession(){
   catch(e){console.warn('work session autosave failed',e)}
 }
 function scheduleWorkSessionSave(){if(!images.length)return;workSessionAutosaveSuppressed=false;clearTimeout(workSessionSaveTimer);workSessionSaveTimer=setTimeout(writeLocalWorkSession,500)}
-function deleteLocalWorkSession(showToast=true){try{localStorage.removeItem(WORK_SESSION_STORAGE_KEY)}catch{}workSessionSavedAtLoad=null;workSessionPending=null;workSessionRestoredIds.clear();workSessionRestoredRecordIndexes.clear();workSessionAmbiguousCount=0;workSessionAutosaveSuppressed=images.length>0;clearTimeout(workSessionSaveTimer);updateWorkSessionUi();if(showToast)toast(tr('workSessionDeleted'))}
+function deleteLocalWorkSession(showToast=true){if(classificationRunning){toast(tr('classificationBusy'));return}try{localStorage.removeItem(WORK_SESSION_STORAGE_KEY)}catch{}workSessionSavedAtLoad=null;workSessionPending=null;workSessionRestoredIds.clear();workSessionRestoredRecordIndexes.clear();workSessionAmbiguousCount=0;workSessionAutosaveSuppressed=images.length>0;clearTimeout(workSessionSaveTimer);updateWorkSessionUi();if(showToast)toast(tr('workSessionDeleted'))}
 function applyWorkSessionSettings(session){
   const allowed=new Set(session.categoryKeys.filter(k=>findCategoryDef(k)));if(allowed.size>=2){for(const c of FIXED_CATEGORY_CATALOG)c.selected=allowed.has(c.key);activeCategoryEntries();renderCategories()}
   if(['loose','normal','strict'].includes(session.strictness))$('#strictnessSelect').value=session.strictness;
@@ -706,7 +706,7 @@ async function retryFailedImages(){if(classificationRunning)return;const failed=
 async function retryFailedImage(img){if(classificationRunning||!img?.processingError)return;clearProcessingFailure(img);filter='all';renderResults();updateClassifyButton();await runClassification()}
 function removeFailedImage(img){if(classificationRunning||!img?.processingError||img.scores)return;const index=images.findIndex(x=>x.id===img.id);if(index<0)return;URL.revokeObjectURL(img.url);images.splice(index,1);selectedImageIds.delete(img.id);mobileExpandedImageIds.delete(img.id);workSessionRestoredIds.delete(img.id);if(lastReviewJumpId===img.id)lastReviewJumpId=null;if(!images.length){filter='all';deleteLocalWorkSession(false)}else scheduleWorkSessionSave();renderImagePreview();renderResults();updateClassifyButton();toast(tr('failedRemoved'))}
 function setClassificationControlsBusy(busy){
-  for(const id of ['chooseImagesButton','chooseFolderButton','clearImagesButton','imageInput','folderInput','restoreChooseImagesButton','restoreChooseFolderButton','importWorkSessionButton','workSessionImportInput','restoreBackupWorkSessionButton']){
+  for(const id of ['chooseImagesButton','chooseFolderButton','clearImagesButton','imageInput','folderInput','restoreChooseImagesButton','restoreChooseFolderButton','importWorkSessionButton','workSessionImportInput','restoreBackupWorkSessionButton','restoreWorkSessionButton','discardWorkSessionButton','clearWorkSessionButton']){
     const el=$('#'+id);if(el)el.disabled=busy
   }
   for(const el of $$('.fixed-chip input[type="checkbox"]'))el.disabled=busy;
@@ -749,6 +749,7 @@ async function runClassification(){
         img.review=state.review;img.reviewReason=state.reason;img.restoredFromSession=false;
         clearProcessingFailure(img);processed++;
       }catch(imageError){
+        assertClassificationActive(gen);
         if(imageError?.name==='AbortError')throw imageError;
         const info=processingErrorFromException(imageError);
         console.warn('image processing failed',img.file.name,imageError);
